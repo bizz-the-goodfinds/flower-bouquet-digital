@@ -4,7 +4,7 @@ import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "About Petalpost",
+  title: "About Flower Bouquet Digital",
   description: `${site.definition} Here's why we built it.`,
   alternates: { canonical: "/about" },
 };

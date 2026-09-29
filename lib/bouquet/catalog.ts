@@ -94,7 +94,7 @@ export const STEMS: StemDef[] = [
 
 export const STEM_BY_SLUG = new Map(STEMS.map((s) => [s.slug, s]));
 
-export const WRAPPERS: Record<string, Paper & { name: string }> = {
+export const PAPERS: Record<string, Paper & { name: string }> = {
   kraft: { name: "Kraft", paper: "#D2AE85", shade: "#A9825C", edge: "#8A6644" },
   blush: { name: "Blush tissue", paper: "#F7C6D3", shade: "#E59BB0", edge: "#C9738C" },
   cream: { name: "Cream", paper: "#F5EDDF", shade: "#DCCFB8", edge: "#B8A88C" },
@@ -103,6 +103,10 @@ export const WRAPPERS: Record<string, Paper & { name: string }> = {
   sage: { name: "Sage", paper: "#C3D5B8", shade: "#98B38A", edge: "#6F8C63" },
   lilac: { name: "Lilac dots", paper: "#DDD0F7", shade: "#B9A5E8", edge: "#FFFFFF", print: "dots" },
   butter: { name: "Butter", paper: "#F9E7A6", shade: "#E7C96A", edge: "#B89A3C" },
+  sky: { name: "Sky", paper: "#C9DDF4", shade: "#9DBDE6", edge: "#6F93C4" },
+  coral: { name: "Coral", paper: "#F7B7A3", shade: "#E88C73", edge: "#C4644C" },
+  ivory: { name: "Ivory", paper: "#FFFBF0", shade: "#EDE3CF", edge: "#C9B99A" },
+  cherry: { name: "Cherry dots", paper: "#E8553E", shade: "#B83A28", edge: "#FFE3DC", print: "dots" },
 };
 
 export const RIBBONS: Record<string, { name: string; color: string; dark: string }> = {
@@ -125,4 +129,4 @@ export const BACKGROUNDS: Record<string, { name: string; fill: string; dark?: bo
   night: { name: "Night", fill: "#1E1B2E", dark: true },
 };
 
-export const DEFAULTS = { wrapper: "kraft", ribbon: "cherry", background: "cream" };
+export const DEFAULTS = { wrapper: "cone", paper: "kraft", ribbon: "cherry", background: "cream" };

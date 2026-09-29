@@ -3,8 +3,10 @@ import { site } from "@/lib/site";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${site.name} – Digital Flower Bouquets`,
-    short_name: site.name,
+    name: site.name,
+    short_name: "Bouquets",
+    id: "/",
+    categories: ["lifestyle", "social"],
     description: site.description,
     start_url: "/create",
     display: "standalone",
@@ -12,7 +14,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#FBF6EE",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
-      { src: "/apple-icon", sizes: "180x180", type: "image/png" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

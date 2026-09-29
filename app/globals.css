@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Short viewports: phones in landscape, small laptop windows */
+@custom-variant short (@media (max-height: 520px));
+/* Phones with little height (iPhone SE, mini): tighten the builder */
+@custom-variant compact (@media (max-height: 740px) and (max-width: 1023px));
+
 @theme static {
   --color-cream: #fbf6ee;
   --color-paper: #fffdf8;
@@ -14,7 +19,7 @@
   --color-lilac: #c9b8f2;
   --color-tomato: #e8553e;
 
-  --font-display: var(--font-instrument), ui-serif, Georgia, serif;
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
@@ -36,6 +41,11 @@
 
 :root {
   color-scheme: light;
+}
+
+html,
+body {
+  overflow-x: clip;
 }
 
 html {
@@ -80,7 +90,7 @@ body {
   @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm;
 }
 @utility label {
-  @apply font-mono text-[11px] tracking-[0.14em] text-ink-soft uppercase;
+  @apply font-mono text-xs tracking-[0.12em] text-ink-soft uppercase;
 }
 @utility field {
   @apply w-full rounded-xl border-[1.5px] border-line bg-paper px-4 py-3 text-base transition-colors outline-none placeholder:text-ink-soft/60 focus:border-ink;
@@ -153,5 +163,11 @@ body {
   100% {
     transform: translate3d(8vw, 105vh, 0) rotate(540deg);
     opacity: 0;
+  }
+}
+@keyframes pp-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
   }
 }

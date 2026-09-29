@@ -234,52 +234,146 @@ export const sprigs = {
   },
 };
 
-// ---------- Wrapper paper ----------
+// ---------- Wraps: a shape (type) × a paper (colour/print) ----------
 
 export type Paper = { paper: string; shade: string; edge: string; print?: "news" | "dots" };
 
-export function wrapperBack(p: Paper) {
-  return (
-    `<path d="M150 540 L262 388 L382 452 L500 356 L618 452 L738 388 L850 540 L566 1010 L434 1010Z" fill="${p.paper}" ${S}/>` +
-    `<path d="M205 552 L500 430 L795 552 L556 990 L444 990Z" fill="${p.shade}" opacity=".45"/>`
-  );
-}
+type Box = { x1: number; y1: number; x2: number; y2: number };
 
-export function wrapperFront(p: Paper) {
-  let print = "";
+export type WrapShape = {
+  name: string;
+  /** Where the stems meet (hidden inside the wrap). */
+  tie: { x: number; y: number };
+  back: (p: Paper) => string;
+  /** Main front silhouette; also used to clip paper prints. */
+  frontPath: string;
+  frontBox: Box;
+  frontExtras: (p: Paper) => string;
+  band: string;
+  bow: { x: number; y: number; s: number };
+};
+
+function print(p: Paper, box: Box) {
+  if (!p.print) return "";
+  let out = "";
   if (p.print === "news") {
-    for (let y = 790; y <= 1130; y += 22) {
-      const t = (y - 690) / 490;
-      const xl = 235 + t * 180 + 22;
-      const xr = 765 - t * 180 - 22;
-      const mid = (xl + xr) / 2 + ((y / 22) % 3) * 12 - 12;
-      print += `<path d="M${f(xl)} ${y} L${f(mid - 8)} ${y} M${f(mid + 8)} ${y} L${f(xr)} ${y}" stroke="#8C857A" stroke-width="3" opacity=".45"/>`;
+    for (let y = box.y1 + 60; y <= box.y2 - 20; y += 22) {
+      const mid = (box.x1 + box.x2) / 2 + ((y / 22) % 3) * 14 - 14;
+      out += `<path d="M${box.x1} ${y} L${f(mid - 8)} ${y} M${f(mid + 8)} ${y} L${box.x2} ${y}" stroke="#8C857A" stroke-width="3" opacity=".45"/>`;
     }
-    print += `<path d="M330 770 L672 770" stroke="#5C564E" stroke-width="7" opacity=".5"/>`;
-  } else if (p.print === "dots") {
-    for (let y = 780; y <= 1140; y += 38)
-      for (let x = 250; x <= 750; x += 38) {
-        const t = (y - 690) / 490;
-        if (x > 235 + t * 180 + 16 && x < 765 - t * 180 - 16)
-          print += `<circle cx="${x + ((y / 38) % 2) * 19}" cy="${y}" r="4.5" fill="${p.edge}" opacity=".55"/>`;
-      }
+    out += `<path d="M${box.x1} ${box.y1 + 30} L${box.x2} ${box.y1 + 30}" stroke="#5C564E" stroke-width="7" opacity=".5"/>`;
+  } else {
+    for (let y = box.y1 + 40, row = 0; y <= box.y2; y += 38, row++)
+      for (let x = box.x1; x <= box.x2; x += 38) out += `<circle cx="${x + (row % 2) * 19}" cy="${y}" r="4.5" fill="${p.edge}" opacity=".55"/>`;
   }
+  return out;
+}
+
+export const WRAP_SHAPES: Record<string, WrapShape> = {
+  cone: {
+    name: "Classic cone",
+    tie: { x: 500, y: 930 },
+    back: (p) =>
+      `<path d="M150 540 L262 388 L382 452 L500 356 L618 452 L738 388 L850 540 L566 1010 L434 1010Z" fill="${p.paper}" ${S}/>` +
+      `<path d="M205 552 L500 430 L795 552 L556 990 L444 990Z" fill="${p.shade}" opacity=".45"/>`,
+    frontPath: "M235 690 C360 745 640 745 765 690 L585 1180 C530 1198 470 1198 415 1180Z",
+    frontBox: { x1: 240, y1: 700, x2: 760, y2: 1190 },
+    frontExtras: (p) =>
+      `<path d="M235 690 C330 735 430 750 520 752 L470 1192 C450 1190 430 1186 415 1180Z" fill="${p.shade}" opacity=".55" ${S}/>` +
+      `<path d="M300 770 L440 1150 M700 770 L580 1150" stroke="${p.edge}" stroke-width="2" opacity=".5" fill="none"/>`,
+    band: "M327 912 Q500 944 673 912 L664 950 Q500 982 336 950Z",
+    bow: { x: 500, y: 930, s: 1 },
+  },
+  wide: {
+    name: "Tissue wrap",
+    tie: { x: 500, y: 930 },
+    back: (p) =>
+      `<path d="M100 480 Q160 360 290 405 Q380 320 500 380 Q620 320 710 405 Q840 360 900 480 L585 1010 L415 1010Z" fill="${p.paper}" ${S}/>` +
+      `<path d="M175 505 Q330 425 500 452 Q670 425 825 505 L560 990 L440 990Z" fill="${p.shade}" opacity=".45"/>` +
+      `<path d="M150 470 Q240 410 300 440 M700 440 Q760 410 850 470" fill="none" stroke="${p.edge}" stroke-width="2" opacity=".6"/>`,
+    frontPath: "M180 675 Q270 718 345 698 Q425 745 500 718 Q575 745 655 698 Q730 718 820 675 L605 1175 C540 1197 460 1197 395 1175Z",
+    frontBox: { x1: 185, y1: 690, x2: 815, y2: 1190 },
+    frontExtras: (p) =>
+      `<path d="M180 675 Q270 718 345 698 Q425 745 500 718 L472 1192 C445 1189 420 1183 395 1175Z" fill="${p.shade}" opacity=".5" ${S}/>` +
+      `<path d="M260 760 L420 1150 M740 760 L585 1150 M500 740 L500 1180" stroke="${p.edge}" stroke-width="2" opacity=".45" fill="none"/>`,
+    band: "M298 910 Q500 948 702 910 L693 952 Q500 990 307 952Z",
+    bow: { x: 500, y: 930, s: 1.05 },
+  },
+  sleeve: {
+    name: "Paper sleeve",
+    tie: { x: 500, y: 900 },
+    back: (p) =>
+      `<path d="M262 430 L322 392 L382 430 L442 392 L500 426 L558 392 L618 430 L678 392 L738 430 L694 1150 L306 1150Z" fill="${p.paper}" ${S}/>` +
+      `<path d="M298 452 L702 452 L672 1130 L328 1130Z" fill="${p.shade}" opacity=".4"/>`,
+    frontPath: "M282 688 L718 688 L674 1174 L326 1174Z",
+    frontBox: { x1: 285, y1: 690, x2: 715, y2: 1174 },
+    frontExtras: (p) =>
+      `<path d="M282 688 L478 688 L468 1174 L326 1174Z" fill="${p.shade}" opacity=".45" ${S}/>` +
+      `<path d="M290 706 L710 706" stroke="${p.edge}" stroke-width="2" opacity=".5"/>`,
+    band: "M298 872 L702 872 L699 914 L301 914Z",
+    bow: { x: 500, y: 893, s: 0.9 },
+  },
+  box: {
+    name: "Hat box",
+    tie: { x: 500, y: 880 },
+    back: (p) =>
+      `<ellipse cx="500" cy="760" rx="262" ry="58" fill="${p.shade}" ${S}/>` +
+      `<ellipse cx="500" cy="772" rx="238" ry="44" fill="#000" opacity=".18"/>`,
+    frontPath: "M238 760 L238 1090 C238 1182 762 1182 762 1090 L762 760 C762 820 238 820 238 760Z",
+    frontBox: { x1: 238, y1: 770, x2: 762, y2: 1180 },
+    frontExtras: (p) =>
+      `<path d="M238 760 C238 800 320 814 360 817 L360 1161 C288 1150 238 1124 238 1090Z" fill="${p.shade}" opacity=".45"/>` +
+      `<path d="M238 760 C238 820 762 820 762 760" fill="none" ${S}/>` +
+      `<path d="M238 1090 C238 1182 762 1182 762 1090" fill="none" stroke="${p.edge}" stroke-width="2" opacity=".5"/>`,
+    band: "M238 952 C238 1010 762 1010 762 952 L762 996 C762 1054 238 1054 238 996Z",
+    bow: { x: 500, y: 1002, s: 1 },
+  },
+  vase: {
+    name: "Vase",
+    tie: { x: 500, y: 840 },
+    back: (p) => `<ellipse cx="500" cy="745" rx="96" ry="22" fill="${p.shade}" ${S}/>`,
+    frontPath:
+      "M404 745 C404 790 420 802 400 842 C300 930 288 1060 360 1142 C392 1178 608 1178 640 1142 C712 1060 700 930 600 842 C580 802 596 790 596 745 C596 768 404 768 404 745Z",
+    frontBox: { x1: 290, y1: 760, x2: 710, y2: 1176 },
+    frontExtras: (p) =>
+      `<path d="M600 842 C700 930 712 1060 640 1142 C624 1160 600 1168 570 1172 C642 1090 652 950 560 852Z" fill="${p.shade}" opacity=".4"/>` +
+      `<path d="M362 930 C346 980 350 1050 377 1100" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" opacity=".45"/>` +
+      `<path d="M404 745 C404 768 596 768 596 745" fill="none" ${S}/>`,
+    band: "M404 772 C404 792 596 792 596 772 L598 802 C598 822 402 822 402 802Z",
+    bow: { x: 500, y: 798, s: 0.72 },
+  },
+};
+
+export const DEFAULT_SHAPE = "cone";
+export const shapeOf = (key: string) => WRAP_SHAPES[key] ?? WRAP_SHAPES[DEFAULT_SHAPE];
+
+export function wrapBack(shape: string, p: Paper) {
+  return shapeOf(shape).back(p);
+}
+
+export function wrapFront(shape: string, p: Paper) {
+  const key = WRAP_SHAPES[shape] ? shape : DEFAULT_SHAPE;
+  const sh = WRAP_SHAPES[key];
+  // Fill, then print + shading clipped to the silhouette, then the outline on top.
   return (
-    `<path d="M235 690 C360 745 640 745 765 690 L585 1180 C530 1198 470 1198 415 1180Z" fill="${p.paper}" ${S}/>` +
-    print +
-    `<path d="M235 690 C330 735 430 750 520 752 L470 1192 C450 1190 430 1186 415 1180Z" fill="${p.shade}" opacity=".55" ${S}/>` +
-    `<path d="M300 770 L440 1150 M700 770 L580 1150" stroke="${p.edge}" stroke-width="2" opacity=".5" fill="none"/>`
+    `<clipPath id="pp-clip-${key}"><path d="${sh.frontPath}"/></clipPath>` +
+    `<path d="${sh.frontPath}" fill="${p.paper}"/>` +
+    `<g clip-path="url(#pp-clip-${key})">${print(p, sh.frontBox)}${sh.frontExtras(p)}</g>` +
+    `<path d="${sh.frontPath}" fill="none" ${S}/>`
   );
 }
 
-export function ribbonMarkup(color: string, dark: string) {
+export function ribbonMarkup(shape: string, color: string, dark: string) {
+  const sh = shapeOf(shape);
+  const { x, y, s } = sh.bow;
   return (
-    `<path d="M327 912 Q500 944 673 912 L664 950 Q500 982 336 950Z" fill="${color}" ${S}/>` +
+    `<path d="${sh.band}" fill="${color}" ${S}/>` +
+    `<g transform="translate(${x} ${y}) scale(${s}) translate(-500 -930)">` +
     `<path d="M494 936 L452 1050 L476 1040 L488 1062 L506 940Z" fill="${dark}" ${S}/>` +
     `<path d="M506 936 L548 1046 L524 1038 L514 1060 L494 940Z" fill="${color}" ${S}/>` +
     `<path d="M500 930 C455 884 396 888 404 930 C410 968 470 958 500 930Z" fill="${color}" ${S}/>` +
     `<path d="M500 930 C545 884 604 888 596 930 C590 968 530 958 500 930Z" fill="${color}" ${S}/>` +
     `<path d="M432 918 C446 912 466 916 482 926 M568 918 C554 912 534 916 518 926" fill="none" stroke="${dark}" stroke-width="2.5" stroke-linecap="round"/>` +
-    `<ellipse cx="500" cy="932" rx="15" ry="13" fill="${dark}" ${S}/>`
+    `<ellipse cx="500" cy="932" rx="15" ry="13" fill="${dark}" ${S}/></g>`
   );
 }

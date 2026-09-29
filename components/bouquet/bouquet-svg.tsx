@@ -1,15 +1,17 @@
 "use client";
 
-import { forwardRef, useMemo, type PointerEvent as RPointerEvent } from "react";
+import { forwardRef, type PointerEvent as RPointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ribbonMarkup, wrapperBack, wrapperFront } from "@/lib/bouquet/art";
-import { DEFAULTS, RIBBONS, STEM_BY_SLUG, WRAPPERS } from "@/lib/bouquet/catalog";
+import { ribbonMarkup, wrapBack, wrapFront } from "@/lib/bouquet/art";
+import { DEFAULTS, PAPERS, RIBBONS, STEM_BY_SLUG } from "@/lib/bouquet/catalog";
 import {
   CANVAS,
   HEAD_SCALE,
   backgroundMarkup,
   headTransform,
   isGreenery,
+  normalizeDesign,
+  tieOf,
   sprigGeometry,
   stemArt,
   stemPath,
@@ -47,14 +49,17 @@ function Grow({ bloom, delay, origin, children }: { bloom?: boolean; delay: numb
 }
 
 export const BouquetSvg = forwardRef<SVGSVGElement, Props>(function BouquetSvg(
-  { design, className, label = "Flower bouquet", showBackground = true, selectedId, bloom, onItemPointerDown, onBackgroundPointerDown, onPointerMove, onPointerEnd },
+  { design: input, className, label = "Flower bouquet", showBackground = true, selectedId, bloom, onItemPointerDown, onBackgroundPointerDown, onPointerMove, onPointerEnd },
   ref,
 ) {
-  const paper = WRAPPERS[design.wrapper] ?? WRAPPERS[DEFAULTS.wrapper];
-  const ribbon = RIBBONS[design.ribbon] ?? RIBBONS[DEFAULTS.ribbon];
-  const back = useMemo(() => wrapperBack(paper), [paper]);
-  const front = useMemo(() => wrapperFront(paper) + ribbonMarkup(ribbon.color, ribbon.dark), [paper, ribbon]);
-  const bg = useMemo(() => backgroundMarkup(design.background), [design.background]);
+  const design = normalizeDesign(input);
+  const { wrapper: shape, paper: paperKey, ribbon: ribbonKey, background: bgKey } = design;
+  const tie = tieOf(shape);
+  const paper = PAPERS[paperKey] ?? PAPERS[DEFAULTS.paper];
+  const rib = RIBBONS[ribbonKey] ?? RIBBONS[DEFAULTS.ribbon];
+  const back = wrapBack(shape, paper);
+  const front = wrapFront(shape, paper) + ribbonMarkup(shape, rib.color, rib.dark);
+  const bg = backgroundMarkup(bgKey);
 
   const greens = design.items.filter(isGreenery);
   const blooms = design.items.filter((i) => !isGreenery(i));
@@ -77,7 +82,7 @@ export const BouquetSvg = forwardRef<SVGSVGElement, Props>(function BouquetSvg(
       <g onPointerDown={onBackgroundPointerDown} dangerouslySetInnerHTML={{ __html: back }} />
 
       {greens.map((g, i) => {
-        const { len, transform } = sprigGeometry(g);
+        const { len, transform } = sprigGeometry(g, tie);
         return (
           <g
             key={g.id}
@@ -92,7 +97,7 @@ export const BouquetSvg = forwardRef<SVGSVGElement, Props>(function BouquetSvg(
         );
       })}
 
-      <g pointerEvents="none" dangerouslySetInnerHTML={{ __html: blooms.map((b) => stemStroke(stemPath(b))).join("") }} />
+      <g pointerEvents="none" dangerouslySetInnerHTML={{ __html: blooms.map((b) => stemStroke(stemPath(b, tie))).join("") }} />
 
       {blooms.map((b, i) => (
         <g

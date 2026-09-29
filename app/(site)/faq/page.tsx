@@ -6,7 +6,7 @@ import { JsonLd, faqLd } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
   title: "FAQ – Digital Flower Bouquets",
-  description: "Answers about Petalpost: is it free, how recipients open bouquets, scheduling, privacy, sharing on Instagram and WhatsApp, and more.",
+  description: "Answers about Flower Bouquet Digital: is it free, how recipients open bouquets, scheduling, privacy, sharing on Instagram and WhatsApp, and more.",
   alternates: { canonical: "/faq" },
 };
 

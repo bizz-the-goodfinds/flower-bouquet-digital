@@ -4,41 +4,69 @@ import { ArrowDownToLine, ArrowUpToLine, Copy, FlipHorizontal2, Minus, Plus, Red
 import { STEM_BY_SLUG } from "@/lib/bouquet/catalog";
 import { MAX_STEMS, isGreenery, newId } from "@/lib/bouquet/composition";
 import { useBuilder } from "@/lib/bouquet/store";
+import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { track } from "@/lib/analytics/track";
 
-function IconBtn({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+function IconBtn({
+  label,
+  onClick,
+  disabled,
+  side = "top",
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  side?: "top" | "bottom";
+  children: React.ReactNode;
+}) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-      className="grid size-10 shrink-0 place-items-center rounded-full text-ink transition hover:bg-ink/5 active:scale-90 disabled:opacity-30"
-    >
-      {children}
-    </button>
+    <Tooltip label={label} side={side}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        disabled={disabled}
+        className="grid size-11 shrink-0 place-items-center rounded-full text-ink transition hover:bg-ink/5 active:scale-90 disabled:opacity-30"
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }
 
 export function TopBar({ onSurprise }: { onSurprise: () => void }) {
+  const [confirmDialog, confirm] = useConfirm();
+  const design = useBuilder((s) => s.design);
   const canUndo = useBuilder((s) => s.past.length > 0);
   const canRedo = useBuilder((s) => s.future.length > 0);
   const count = useBuilder((s) => s.design.items.length);
   const { undo, redo, shuffle, commit, select } = useBuilder.getState();
   return (
-    <div className="flex items-center justify-between gap-1">
+    <div className="flex shrink-0 items-center justify-between gap-1">
+      {confirmDialog}
       <div className="flex items-center">
-        <IconBtn label="Undo" onClick={undo} disabled={!canUndo}>
+        <IconBtn label="Undo (Ctrl+Z)" side="bottom" onClick={undo} disabled={!canUndo}>
           <Undo2 className="size-5" />
         </IconBtn>
-        <IconBtn label="Redo" onClick={redo} disabled={!canRedo}>
+        <IconBtn label="Redo (Ctrl+Shift+Z)" side="bottom" onClick={redo} disabled={!canRedo}>
           <Redo2 className="size-5" />
         </IconBtn>
         <IconBtn
-          label="Clear all"
+          label="Clear all flowers"
+          side="bottom"
           disabled={!count}
-          onClick={() => {
+          onClick={async () => {
+            const ok = await confirm({
+              title: `Clear all ${count} stems?`,
+              description: "Your wrap, ribbon and background stay. You can undo this.",
+              preview: <BouquetSvg design={design} className="h-auto w-full rounded-2xl" label="Current bouquet" />,
+              confirmLabel: "Clear flowers",
+              tone: "danger",
+            });
+            if (!ok) return;
             commit((d) => ({ ...d, items: [] }));
             select(null);
           }}
@@ -47,9 +75,12 @@ export function TopBar({ onSurprise }: { onSurprise: () => void }) {
         </IconBtn>
       </div>
       <div className="flex items-center gap-2">
-        <button type="button" onClick={onSurprise} className="btn-ghost !px-3 text-sm" aria-label="Surprise me">
-          <Wand2 className="size-4" aria-hidden /> <span className="hidden sm:inline">Surprise me</span>
-        </button>
+        <Tooltip label="Surprise me: a styled bouquet" side="bottom">
+          <button type="button" onClick={onSurprise} className="btn-ghost !px-3 text-sm whitespace-nowrap" aria-label="Surprise me">
+            <Wand2 className="size-4" aria-hidden /> <span className="hidden sm:inline short:hidden">Surprise me</span>
+          </button>
+        </Tooltip>
+        <Tooltip label="Auto-arrange your flowers" side="bottom">
         <button
           type="button"
           disabled={count < 2}
@@ -61,6 +92,7 @@ export function TopBar({ onSurprise }: { onSurprise: () => void }) {
         >
           <Shuffle className="size-4" aria-hidden /> Shuffle
         </button>
+        </Tooltip>
       </div>
     </div>
   );

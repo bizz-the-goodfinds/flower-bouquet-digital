@@ -1,0 +1,30 @@
+/** Bouquet logo mark (64×64). Shared by the React logo, the favicon and the apple icon. */
+export const LOGO_MARK_INNER = [
+  // greenery
+  `<path d="M13 30 C8 22 9 14 14 9 C18 16 18 24 16 30Z" fill="#9DB59A" stroke="#1B1A17" stroke-width="2" stroke-linejoin="round"/>`,
+  `<path d="M51 30 C56 22 55 14 50 9 C46 16 46 24 48 30Z" fill="#9DB59A" stroke="#1B1A17" stroke-width="2" stroke-linejoin="round"/>`,
+  // back blooms
+  `<circle cx="21" cy="20" r="9.5" fill="#F4A6C0" stroke="#1B1A17" stroke-width="2"/>`,
+  `<path d="M18 20 C18 16 24 16 24 20 C24 23 19 24 18 21" fill="none" stroke="#D6336C" stroke-width="1.8" stroke-linecap="round"/>`,
+  `<circle cx="43" cy="20" r="9.5" fill="#E8553E" stroke="#1B1A17" stroke-width="2"/>`,
+  `<path d="M40 20 C40 16 46 16 46 20 C46 23 41 24 40 21" fill="none" stroke="#A11F35" stroke-width="1.8" stroke-linecap="round"/>`,
+  // top daisy
+  ...[0, 45, 90, 135, 180, 225, 270, 315].map(
+    (a) => `<ellipse cx="32" cy="7.5" rx="3" ry="5" transform="rotate(${a} 32 13)" fill="#FFFDF7" stroke="#1B1A17" stroke-width="1.6"/>`,
+  ),
+  `<circle cx="32" cy="13" r="3.6" fill="#F7DE8A" stroke="#1B1A17" stroke-width="1.6"/>`,
+  // front bloom
+  `<circle cx="32" cy="27" r="8.5" fill="#FBD0DE" stroke="#1B1A17" stroke-width="2"/>`,
+  `<path d="M29 27 C29 23.5 35 23.5 35 27 C35 30 30 31 29 28" fill="none" stroke="#DC7A9C" stroke-width="1.8" stroke-linecap="round"/>`,
+  // cone wrap
+  `<path d="M12 31 C24 35 40 35 52 31 L37 61 C34 62 30 62 27 61Z" fill="#D2AE85" stroke="#1B1A17" stroke-width="2.4" stroke-linejoin="round"/>`,
+  `<path d="M12 31 C19 34 26 35 33 35 L29 61.5 C28.3 61.4 27.6 61.2 27 61Z" fill="#A9825C" opacity=".55"/>`,
+  // bow
+  `<path d="M32 45 L24.5 40.5 L24.5 49.5Z M32 45 L39.5 40.5 L39.5 49.5Z" fill="#D6336C" stroke="#1B1A17" stroke-width="1.8" stroke-linejoin="round"/>`,
+  `<circle cx="32" cy="45" r="2.6" fill="#E8553E" stroke="#1B1A17" stroke-width="1.6"/>`,
+].join("");
+
+export const logoSvg = (opts: { background?: string; radius?: number } = {}) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${
+    opts.background ? `<rect width="64" height="64" rx="${opts.radius ?? 14}" fill="${opts.background}"/>` : ""
+  }${LOGO_MARK_INNER}</svg>`;

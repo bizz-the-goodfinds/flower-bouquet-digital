@@ -15,7 +15,7 @@ export const organizationLd = () => ({
   "@id": absoluteUrl("/#organization"),
   name: site.name,
   url: site.url,
-  logo: absoluteUrl("/icon.svg"),
+  logo: { "@type": "ImageObject", url: absoluteUrl("/icons/logo-600.png"), width: 600, height: 600 },
   description: site.definition,
 });
 
@@ -34,7 +34,8 @@ export const webAppLd = () => ({
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "@id": absoluteUrl("/#app"),
-  name: `${site.name} – Digital Flower Bouquet Maker`,
+  name: site.name,
+  alternateName: "Digital Flower Bouquet Maker",
   url: absoluteUrl("/create"),
   applicationCategory: "LifestyleApplication",
   operatingSystem: "Any (web browser)",

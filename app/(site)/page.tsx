@@ -7,7 +7,7 @@ import { SITE_FAQ } from "@/lib/content/guides";
 import { JsonLd, faqLd, organizationLd, webAppLd, websiteLd } from "@/lib/seo/jsonld";
 import { site } from "@/lib/site";
 
-const HERO = { stems: ["peony", "red-rose", "pink-rose", "pink-tulip", "ranunculus", "daisy", "babys-breath", "lavender", "eucalyptus", "fern", "white-rose"], wrapper: "kraft", ribbon: "cherry", background: "cream" };
+const HERO = { stems: ["peony", "red-rose", "pink-rose", "pink-tulip", "ranunculus", "daisy", "babys-breath", "lavender", "eucalyptus", "fern", "white-rose"], wrap: "cone", paper: "kraft", ribbon: "cherry", background: "cream" };
 
 const MEANINGS = [
   ["red-rose", "Red rose", "Deep love", "/flowers/rose"],
@@ -52,7 +52,7 @@ export default function Home() {
             <div className="absolute inset-x-6 top-10 bottom-4 -z-10 rounded-[40%] bg-petal/30 blur-3xl" aria-hidden />
             <StaticBouquet design={presetDesign(HERO, 20260929)} label="Illustrated bouquet of peonies, roses and tulips wrapped in kraft paper" className="animate-float" />
             <div className="absolute right-0 bottom-16 w-40 rotate-6 rounded-lg border-[1.5px] border-ink bg-paper p-3 shadow-[3px_3px_0_0_var(--color-ink)] sm:-right-4">
-              <p className="label !text-[9px]">for you</p>
+              <p className="label">for you</p>
               <p className="mt-1 font-display text-lg leading-tight italic">&ldquo;saw these and thought of you&rdquo;</p>
             </div>
           </div>
@@ -113,12 +113,12 @@ export default function Home() {
             <li key={o.slug}>
               <Link
                 href={`/occasions/${o.slug}`}
-                className="group flex h-full items-center gap-3 rounded-2xl border border-line bg-paper px-4 py-4 transition hover:-translate-y-0.5 hover:border-ink hover:shadow-[3px_3px_0_0_var(--color-ink)]"
+                className="group flex h-full min-h-14 items-center gap-2.5 rounded-2xl border border-line bg-paper px-3 py-3 transition sm:gap-3 sm:px-4 sm:py-4 hover:-translate-y-0.5 hover:border-ink hover:shadow-[3px_3px_0_0_var(--color-ink)]"
               >
                 <span className="text-2xl" aria-hidden>
                   {o.emoji}
                 </span>
-                <span className="font-medium">{o.name}</span>
+                <span className="min-w-0 text-[15px] leading-tight font-medium [overflow-wrap:anywhere] sm:text-base">{o.name}</span>
               </Link>
             </li>
           ))}

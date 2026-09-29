@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Image as ImageIcon, Mail, QrCode, Send, Smartphone } from "lucide-react";
+import { Check, Clapperboard, Copy, Film, Image as ImageIcon, Mail, QrCode, Send, Smartphone } from "lucide-react";
 import type { Design } from "@/lib/bouquet/composition";
-import { renderBouquetPng, saveImage, type ExportFormat } from "@/lib/bouquet/export";
+import type { CardStyle } from "@/lib/bouquet/card";
 import { track } from "@/lib/analytics/track";
+import { useExport, type ExportKind } from "./use-export";
 
-export function SharePanel({ url, to, from, design }: { url: string; to: string; from: string; design: Design }) {
+export function SharePanel({ url, to, from, design, message, style }: { url: string; to: string; from: string; design: Design; message: string; style: CardStyle }) {
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
-  const [busy, setBusy] = useState<ExportFormat | null>(null);
+  const exp = useExport({ design, to, from, message, style }, "sender");
   const text = to ? `${to}, I made you a bouquet 💐` : "I made you a bouquet 💐";
   const canNativeShare = typeof navigator !== "undefined" && "share" in navigator;
 
@@ -27,17 +28,6 @@ export function SharePanel({ url, to, from, design }: { url: string; to: string;
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
     track("share_clicked", { channel: "copy" });
-  };
-
-  const download = async (format: ExportFormat) => {
-    setBusy(format);
-    try {
-      const blob = await renderBouquetPng(design, { format, to, from });
-      await saveImage(blob, `bouquet${to ? `-for-${to.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : ""}-${format}.png`);
-      track("image_downloaded", { format });
-    } finally {
-      setBusy(null);
-    }
   };
 
   const channels = [
@@ -94,17 +84,27 @@ export function SharePanel({ url, to, from, design }: { url: string; to: string;
         </a>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <button className="btn-ghost flex-col !gap-1 rounded-2xl border border-line !py-3 text-xs" onClick={() => download("post")} disabled={busy !== null}>
-          <ImageIcon className="size-5" aria-hidden />
-          {busy === "post" ? "Saving…" : "Save image"}
-        </button>
-        <button className="btn-ghost flex-col !gap-1 rounded-2xl border border-line !py-3 text-xs" onClick={() => download("story")} disabled={busy !== null}>
-          <Smartphone className="size-5" aria-hidden />
-          {busy === "story" ? "Saving…" : "Story 9:16"}
-        </button>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {(
+          [
+            ["post", "Save image", ImageIcon],
+            ["story", "Story 9:16", Smartphone],
+            ["video", "Video", Clapperboard],
+            ["gif", "GIF", Film],
+          ] as [ExportKind, string, typeof ImageIcon][]
+        ).map(([kind, label, Icon]) => (
+          <button
+            key={kind}
+            className="btn-ghost min-h-16 flex-col !gap-1 rounded-2xl border border-line !py-3 text-xs"
+            onClick={() => exp.run(kind)}
+            disabled={exp.busy !== null}
+          >
+            <Icon className="size-5" aria-hidden />
+            {exp.busy === kind ? (kind === "video" || kind === "gif" ? `${Math.round(exp.progress * 100)}%` : "Saving…") : label}
+          </button>
+        ))}
         <button
-          className="btn-ghost flex-col !gap-1 rounded-2xl border border-line !py-3 text-xs"
+          className="btn-ghost min-h-16 flex-col !gap-1 rounded-2xl border border-line !py-3 text-xs"
           onClick={async () => {
             if (qr) return setQr(null);
             const QR = await import("qrcode");
@@ -116,6 +116,11 @@ export function SharePanel({ url, to, from, design }: { url: string; to: string;
           {qr ? "Hide QR" : "QR code"}
         </button>
       </div>
+      {exp.error && (
+        <p role="alert" className="text-sm text-petal-deep">
+          {exp.error}
+        </p>
+      )}
       {qr && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={qr} alt="QR code linking to your bouquet" className="mx-auto w-48 rounded-xl border border-line" width={192} height={192} />

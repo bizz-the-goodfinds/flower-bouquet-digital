@@ -34,6 +34,14 @@ export function BuilderCanvas() {
     return { x: p.x, y: p.y };
   }, []);
 
+  const capture = (id: number) => {
+    try {
+      svgRef.current?.setPointerCapture(id);
+    } catch {
+      // Some browsers reject capture for pointers that already ended; dragging still works without it.
+    }
+  };
+
   const startPinch = () => {
     const g = gesture.current;
     if (!g || pointers.current.size < 2) return;
@@ -45,7 +53,7 @@ export function BuilderCanvas() {
 
   const onItemPointerDown = (id: string, e: RPointerEvent<SVGGElement>) => {
     e.stopPropagation();
-    svgRef.current?.setPointerCapture(e.pointerId);
+    capture(e.pointerId);
     pointers.current.set(e.pointerId, toSvg(e));
     const { design: d, select } = useBuilder.getState();
     if (pointers.current.size === 1 || !gesture.current) {
@@ -58,7 +66,7 @@ export function BuilderCanvas() {
 
   const onBackgroundPointerDown = (e: RPointerEvent<SVGGElement>) => {
     if (gesture.current) {
-      svgRef.current?.setPointerCapture(e.pointerId);
+      capture(e.pointerId);
       pointers.current.set(e.pointerId, toSvg(e));
       startPinch();
     } else useBuilder.getState().select(null);

@@ -1,9 +1,12 @@
 import { z } from "zod";
-import { INK, ribbonMarkup, wrapperBack, wrapperFront } from "./art";
-import { BACKGROUNDS, DEFAULTS, RIBBONS, STEM_BY_SLUG, WRAPPERS } from "./catalog";
+import { INK, WRAP_SHAPES, ribbonMarkup, shapeOf, wrapBack, wrapFront } from "./art";
+import { BACKGROUNDS, DEFAULTS, PAPERS, RIBBONS, STEM_BY_SLUG } from "./catalog";
 
 export const CANVAS = { w: 1000, h: 1250 } as const;
+/** Default tie point (classic cone). Each wrap shape has its own; see tieOf(). */
 export const TIE = { x: 500, y: 930 } as const;
+type Pt = { x: number; y: number };
+export const tieOf = (wrapper: string): Pt => shapeOf(wrapper).tie;
 export const MAX_STEMS = 18;
 /** Art is drawn small; heads are scaled up by this on the canvas. */
 export const HEAD_SCALE = 1.5;
@@ -18,15 +21,27 @@ export const itemSchema = z.object({
   fx: z.boolean().optional(),
 });
 
-export const designSchema = z.object({
+// Older clients send the paper key as `wrapper` and no `paper`; normalize before validating.
+export const designSchema = z.preprocess((v) => (v && typeof v === "object" ? normalizeDesign(v as { wrapper?: string; paper?: string }) : v), z.object({
   items: z.array(itemSchema).min(1).max(MAX_STEMS),
-  wrapper: z.string().refine((s) => s in WRAPPERS),
+  wrapper: z.string().refine((s) => s in WRAP_SHAPES),
+  paper: z.string().refine((s) => s in PAPERS),
   ribbon: z.string().refine((s) => s in RIBBONS),
   background: z.string().refine((s) => s in BACKGROUNDS),
-});
+}));
 
 export type Item = z.infer<typeof itemSchema>;
-export type Design = z.infer<typeof designSchema>;
+export type Design = z.output<typeof designSchema>;
+
+/**
+ * Bouquets saved before wrap shapes existed stored the paper key in `wrapper`.
+ * Normalizes any stored/legacy design to { wrapper: shape, paper }.
+ */
+export function normalizeDesign<T extends { wrapper?: string; paper?: string }>(d: T): T & { wrapper: string; paper: string } {
+  if (d.paper && d.wrapper && d.wrapper in WRAP_SHAPES) return d as T & { wrapper: string; paper: string };
+  if (d.wrapper && d.wrapper in PAPERS && !(d.wrapper in WRAP_SHAPES)) return { ...d, wrapper: DEFAULTS.wrapper, paper: d.wrapper };
+  return { ...d, wrapper: d.wrapper && d.wrapper in WRAP_SHAPES ? d.wrapper : DEFAULTS.wrapper, paper: d.paper && d.paper in PAPERS ? d.paper : DEFAULTS.paper };
+}
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -35,15 +50,15 @@ export function isGreenery(item: Pick<Item, "f">) {
 }
 
 /** Curved stem from the head down through the tie point, ending hidden inside the wrapper. */
-export function stemPath(item: Item) {
-  const dx = TIE.x - item.x;
-  const dy = TIE.y - item.y;
+export function stemPath(item: Item, tie: Pt = TIE) {
+  const dx = tie.x - item.x;
+  const dy = tie.y - item.y;
   const len = Math.hypot(dx, dy) || 1;
-  const cx = (item.x + TIE.x) / 2 - (dy / len) * (item.x - TIE.x) * 0.08;
-  const cy = (item.y + TIE.y) / 2 + (dx / len) * (item.x - TIE.x) * 0.08;
-  const ex = TIE.x + (dx / len) * 170;
-  const ey = TIE.y + (dy / len) * 170;
-  return `M${r1(item.x)} ${r1(item.y)} Q${r1(cx)} ${r1(cy)} ${r1(TIE.x)} ${r1(TIE.y)} L${r1(ex)} ${r1(ey)}`;
+  const cx = (item.x + tie.x) / 2 - (dy / len) * (item.x - tie.x) * 0.08;
+  const cy = (item.y + tie.y) / 2 + (dx / len) * (item.x - tie.x) * 0.08;
+  const ex = tie.x + (dx / len) * 170;
+  const ey = tie.y + (dy / len) * 170;
+  return `M${r1(item.x)} ${r1(item.y)} Q${r1(cx)} ${r1(cy)} ${r1(tie.x)} ${r1(tie.y)} L${r1(ex)} ${r1(ey)}`;
 }
 
 export function headTransform(item: Item) {
@@ -51,12 +66,12 @@ export function headTransform(item: Item) {
 }
 
 /** Greenery grows from the tie point to the item position. */
-export function sprigGeometry(item: Item) {
-  const dx = item.x - TIE.x;
-  const dy = item.y - TIE.y;
+export function sprigGeometry(item: Item, tie: Pt = TIE) {
+  const dx = item.x - tie.x;
+  const dy = item.y - tie.y;
   const len = Math.max(160, Math.hypot(dx, dy));
   const angle = (Math.atan2(dx, -dy) * 180) / Math.PI;
-  return { len, transform: `translate(${TIE.x} ${TIE.y}) rotate(${r1(angle)}) scale(${r1(item.s)} 1)` };
+  return { len, transform: `translate(${tie.x} ${tie.y}) rotate(${r1(angle)}) scale(${r1(item.s)} 1)` };
 }
 
 const artCache = new Map<string, string>();
@@ -84,23 +99,36 @@ export function backgroundMarkup(key: string) {
   return out;
 }
 
-/** Full bouquet as a standalone SVG string (for OG images and PNG export). */
-export function bouquetSvg(d: Design, opts: { background?: boolean; width?: number } = {}) {
-  const paper = WRAPPERS[d.wrapper] ?? WRAPPERS[DEFAULTS.wrapper];
+/** Bouquet split into drawing layers: back (wrap, greens, stems), each flower head, front (wrap front, ribbon). */
+export function bouquetLayers(input: Design) {
+  const d = normalizeDesign(input);
+  const paper = PAPERS[d.paper] ?? PAPERS[DEFAULTS.paper];
   const ribbon = RIBBONS[d.ribbon] ?? RIBBONS[DEFAULTS.ribbon];
+  const tie = tieOf(d.wrapper);
   const greens = d.items.filter(isGreenery);
   const blooms = d.items.filter((i) => !isGreenery(i));
-  const body =
-    (opts.background === false ? "" : backgroundMarkup(d.background)) +
-    wrapperBack(paper) +
-    greens.map((g) => {
-      const { len, transform } = sprigGeometry(g);
-      return `<g transform="${transform}">${stemArt(g.f, len)}</g>`;
-    }).join("") +
-    blooms.map((b) => stemStroke(stemPath(b))).join("") +
-    blooms.map((b) => `<g transform="${headTransform(b)}">${stemArt(b.f)}</g>`).join("") +
-    wrapperFront(paper) +
-    ribbonMarkup(ribbon.color, ribbon.dark);
+  const back =
+    wrapBack(d.wrapper, paper) +
+    greens
+      .map((g) => {
+        const { len, transform } = sprigGeometry(g, tie);
+        return `<g transform="${transform}">${stemArt(g.f, len)}</g>`;
+      })
+      .join("") +
+    blooms.map((b) => stemStroke(stemPath(b, tie))).join("");
+  const heads = blooms.map((b) => {
+    const def = STEM_BY_SLUG.get(b.f);
+    const reach = Math.max((def?.size ?? 60) * 1.45, def?.kind === "filler" ? 180 : 0) * b.s * HEAD_SCALE;
+    return { item: b, reach, markup: `<g transform="${headTransform(b)}">${stemArt(b.f)}</g>` };
+  });
+  const front = wrapFront(d.wrapper, paper) + ribbonMarkup(d.wrapper, ribbon.color, ribbon.dark);
+  return { design: d, back, heads, front };
+}
+
+/** Full bouquet as a standalone SVG string (for OG images and PNG export). */
+export function bouquetSvg(input: Design, opts: { background?: boolean; width?: number } = {}) {
+  const { design, back, heads, front } = bouquetLayers(input);
+  const body = (opts.background === false ? "" : backgroundMarkup(design.background)) + back + heads.map((h) => h.markup).join("") + front;
   const w = opts.width ?? CANVAS.w;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS.w} ${CANVAS.h}" width="${w}" height="${Math.round((w * CANVAS.h) / CANVAS.w)}">${body}</svg>`;
 }
@@ -122,7 +150,8 @@ let idCounter = 0;
 export const newId = () => `${Date.now().toString(36).slice(-5)}${(idCounter++ % 1296).toString(36)}`;
 
 /** Arrange stems into a natural dome: big blooms in the middle, fillers at the edges, greenery fanned behind. */
-export function arrange(slugs: string[], seed = Date.now()): Item[] {
+export function arrange(slugs: string[], seed = Date.now(), wrapper = "cone"): Item[] {
+  const TIE = tieOf(wrapper);
   const rand = mulberry32(seed);
   const jitter = (n: number) => (rand() - 0.5) * 2 * n;
   const greens = slugs.filter((s) => STEM_BY_SLUG.get(s)?.kind === "greenery");
@@ -174,7 +203,8 @@ const clampX = (x: number) => Math.round(Math.min(900, Math.max(100, x)));
 const clampY = (y: number) => Math.round(Math.min(860, Math.max(90, y)));
 
 /** Drop position for a newly added stem: near the dome, not on top of the last one. */
-export function spawnPosition(existing: Item[], slug: string, rand = Math.random): Item {
+export function spawnPosition(existing: Item[], slug: string, rand = Math.random, wrapper = "cone"): Item {
+  const TIE = tieOf(wrapper);
   const def = STEM_BY_SLUG.get(slug)!;
   if (def.kind === "greenery") {
     const angle = (-116 + rand() * 52) * (Math.PI / 180);

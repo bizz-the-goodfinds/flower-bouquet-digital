@@ -7,7 +7,7 @@ export type Occasion = {
   /** 40–60 word direct answer shown first on the page (AEO). */
   answer: string;
   flowers: string[];
-  preset: { stems: string[]; wrapper: string; ribbon: string; background: string };
+  preset: { stems: string[]; wrap: string; paper: string; ribbon: string; background: string };
   messages: string[];
   faq: { q: string; a: string }[];
 };
@@ -20,9 +20,9 @@ export const OCCASIONS: Occasion[] = [
     title: "Digital Birthday Flowers – Send a Free Bouquet Link",
     metaDescription: "Make a free digital birthday bouquet with sunflowers, gerberas and roses, add a birthday note and send it as a link that blooms open.",
     answer:
-      "The best digital birthday bouquet is bright and cheerful: sunflowers for warmth, gerberas for joy and a few pink roses for affection. On Petalpost you can build one in under a minute, write a birthday note, and schedule the link to open exactly at midnight on their birthday.",
+      "The best digital birthday bouquet is bright and cheerful: sunflowers for warmth, gerberas for joy and a few pink roses for affection. On Flower Bouquet Digital you can build one in under a minute, write a birthday note, and schedule the link to open exactly at midnight on their birthday.",
     flowers: ["sunflower", "gerbera", "rose", "daisy", "tulip"],
-    preset: { stems: ["sunflower", "gerbera", "pink-gerbera", "yellow-tulip", "daisy", "daisy", "pink-rose", "babys-breath", "eucalyptus", "ruscus"], wrapper: "butter", ribbon: "cherry", background: "blush" },
+    preset: { stems: ["sunflower", "gerbera", "pink-gerbera", "yellow-tulip", "daisy", "daisy", "pink-rose", "babys-breath", "eucalyptus", "ruscus"], wrap: "box", paper: "butter", ribbon: "cherry", background: "blush" },
     messages: [
       "Another year of you being iconic. Happy birthday 🎂",
       "These won't wilt, just like my love for you. HBD!",
@@ -34,7 +34,7 @@ export const OCCASIONS: Occasion[] = [
     faq: [
       { q: "Can I schedule a birthday bouquet to open at midnight?", a: "Yes. When writing your card, set an open date and time. The link shows a countdown until then and blooms open at that exact moment." },
       { q: "What flowers are good for a birthday?", a: "Sunflowers, gerberas and yellow roses say joy and friendship. Pink roses and peonies feel more affectionate. Mix two or three bright flowers with greenery for a balanced bouquet." },
-      { q: "Is sending digital birthday flowers free?", a: "Yes. Making, sending and opening bouquets on Petalpost is completely free and needs no account." },
+      { q: "Is sending digital birthday flowers free?", a: "Yes. Making, sending and opening bouquets on Flower Bouquet Digital is completely free and needs no account." },
     ],
   },
   {
@@ -44,9 +44,9 @@ export const OCCASIONS: Occasion[] = [
     title: "Digital Anniversary Bouquet – Romantic Flowers Online",
     metaDescription: "Send a romantic digital anniversary bouquet with red roses and peonies. Write a love note and share it as a link. Free, no signup.",
     answer:
-      "For an anniversary, red roses remain the clearest symbol of deep love, and peonies add a sense of a happy, lasting relationship. A digital anniversary bouquet on Petalpost pairs those flowers with a handwritten-style love note and arrives as a link that unwraps on their phone.",
+      "For an anniversary, red roses remain the clearest symbol of deep love, and peonies add a sense of a happy, lasting relationship. A digital anniversary bouquet on Flower Bouquet Digital pairs those flowers with a handwritten-style love note and arrives as a link that unwraps on their phone.",
     flowers: ["rose", "peony", "ranunculus", "tulip", "babys-breath"],
-    preset: { stems: ["red-rose", "red-rose", "red-rose", "peony", "peony", "ranunculus", "babys-breath", "babys-breath", "eucalyptus", "fern"], wrapper: "noir", ribbon: "ivory", background: "blush" },
+    preset: { stems: ["red-rose", "red-rose", "red-rose", "peony", "peony", "ranunculus", "babys-breath", "babys-breath", "eucalyptus", "fern"], wrap: "cone", paper: "noir", ribbon: "ivory", background: "blush" },
     messages: [
       "Every year with you is my favorite year.",
       "Still choosing you. Happy anniversary 💞",
@@ -57,7 +57,7 @@ export const OCCASIONS: Occasion[] = [
     ],
     faq: [
       { q: "What flowers mean love for an anniversary?", a: "Red roses mean romantic love, peonies mean a happy relationship, and baby's breath means everlasting love. A mix of the three is a classic anniversary bouquet." },
-      { q: "Can I send an anniversary bouquet long distance?", a: "Yes. A Petalpost bouquet is a link, so it reaches anyone, anywhere, instantly through WhatsApp, iMessage, Instagram or email." },
+      { q: "Can I send an anniversary bouquet long distance?", a: "Yes. A bouquet from Flower Bouquet Digital is a link, so it reaches anyone, anywhere, instantly through WhatsApp, iMessage, Instagram or email." },
       { q: "Can they reply to my bouquet?", a: "Your partner can react with an emoji and a short reply, and send a bouquet back with one tap." },
     ],
   },
@@ -70,7 +70,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "The best flowers for an apology are white roses for a fresh start, purple tulips for admiration and hydrangeas for heartfelt understanding. A digital apology bouquet works best with a short, sincere note that names what you are sorry for, without excuses.",
     flowers: ["rose", "tulip", "hydrangea", "lavender"],
-    preset: { stems: ["white-rose", "white-rose", "purple-tulip", "purple-tulip", "hydrangea", "lavender", "lavender", "babys-breath", "eucalyptus"], wrapper: "cream", ribbon: "lilac", background: "lilac" },
+    preset: { stems: ["white-rose", "white-rose", "purple-tulip", "purple-tulip", "hydrangea", "lavender", "lavender", "babys-breath", "eucalyptus"], wrap: "wide", paper: "cream", ribbon: "lilac", background: "lilac" },
     messages: [
       "I'm sorry. You deserved better from me, and I'm working on it.",
       "No excuses, just sorry. Can we talk?",
@@ -94,7 +94,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "A bouquet for a crush should feel sweet, not intense: pink tulips for care, ranunculus for \"you're charming\" and a sprig of forget-me-nots. Keep the note light and playful. A digital bouquet is a low-pressure way to show interest without an awkward in-person moment.",
     flowers: ["tulip", "ranunculus", "forget-me-not", "cosmos", "daisy"],
-    preset: { stems: ["pink-tulip", "pink-tulip", "ranunculus", "peach-ranunculus", "cosmos", "forget-me-not", "daisy", "fern"], wrapper: "blush", ribbon: "pink", background: "blush" },
+    preset: { stems: ["pink-tulip", "pink-tulip", "ranunculus", "peach-ranunculus", "cosmos", "forget-me-not", "daisy", "fern"], wrap: "sleeve", paper: "blush", ribbon: "pink", background: "blush" },
     messages: [
       "Not to be dramatic but you're kind of my favorite notification.",
       "Saw these and thought of you. That's it. That's the message.",
@@ -118,7 +118,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "Yellow roses are the classic friendship flower, and daisies and sunflowers add loyalty and fun. A digital friendship bouquet is perfect for Friendship Day, Galentine's, or a random Tuesday when your best friend needs to know they are appreciated.",
     flowers: ["rose", "daisy", "sunflower", "gerbera", "cosmos"],
-    preset: { stems: ["yellow-rose", "yellow-rose", "sunflower", "daisy", "daisy", "gerbera", "cosmos", "babys-breath", "ruscus", "pampas"], wrapper: "news", ribbon: "gold", background: "butter" },
+    preset: { stems: ["yellow-rose", "yellow-rose", "sunflower", "daisy", "daisy", "gerbera", "cosmos", "babys-breath", "ruscus", "pampas"], wrap: "cone", paper: "news", ribbon: "gold", background: "butter" },
     messages: [
       "Thank you for being my emergency contact and my entertainment.",
       "Yellow roses = friendship. You = the best one.",
@@ -142,7 +142,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "Get well bouquets should feel light and hopeful: sunflowers for warmth, daisies for fresh starts and eucalyptus for healing. A digital get well bouquet is also allergy-free and hospital-friendly, since many wards do not allow real flowers.",
     flowers: ["sunflower", "daisy", "tulip", "eucalyptus", "gerbera"],
-    preset: { stems: ["sunflower", "daisy", "daisy", "yellow-tulip", "gerbera", "white-cosmos", "eucalyptus", "eucalyptus", "fern"], wrapper: "sage", ribbon: "gold", background: "sage" },
+    preset: { stems: ["sunflower", "daisy", "daisy", "yellow-tulip", "gerbera", "white-cosmos", "eucalyptus", "eucalyptus", "fern"], wrap: "vase", paper: "sage", ribbon: "gold", background: "sage" },
     messages: [
       "Rest up. The world is less fun without you in it.",
       "Sending sunshine and zero germs. Get well soon!",
@@ -166,7 +166,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "Graduation flowers celebrate achievement: stargazer lilies for ambition, sunflowers for pride and gerberas for joy. A digital graduation bouquet can be sent to a whole class group chat or timed to open right after the ceremony.",
     flowers: ["lily", "sunflower", "gerbera", "rose"],
-    preset: { stems: ["stargazer-lily", "sunflower", "gerbera", "yellow-rose", "yellow-rose", "pink-gerbera", "babys-breath", "ruscus", "pampas"], wrapper: "noir", ribbon: "gold", background: "cream" },
+    preset: { stems: ["stargazer-lily", "sunflower", "gerbera", "yellow-rose", "yellow-rose", "pink-gerbera", "babys-breath", "ruscus", "pampas"], wrap: "sleeve", paper: "noir", ribbon: "gold", background: "cream" },
     messages: [
       "You did that. Congratulations, graduate 🎓",
       "All those late nights paid off. So proud of you!",
@@ -188,9 +188,9 @@ export const OCCASIONS: Occasion[] = [
     title: "Mother's Day Flowers – Send Mom a Digital Bouquet",
     metaDescription: "Send mom a digital Mother's Day bouquet with pink carnations, peonies and tulips. Write a note she'll keep. Free, no app needed.",
     answer:
-      "Pink carnations are the traditional Mother's Day flower and stand for a mother's love. Peonies and pink tulips make the bouquet softer and fuller. A digital bouquet from Petalpost opens in any phone browser, so mom does not need to install anything.",
+      "Pink carnations are the traditional Mother's Day flower and stand for a mother's love. Peonies and pink tulips make the bouquet softer and fuller. A digital bouquet from Flower Bouquet Digital opens in any phone browser, so mom does not need to install anything.",
     flowers: ["carnation", "peony", "tulip", "rose", "lavender"],
-    preset: { stems: ["pink-carnation", "pink-carnation", "peony", "pink-tulip", "pink-tulip", "pink-rose", "lavender", "babys-breath", "eucalyptus"], wrapper: "blush", ribbon: "ivory", background: "blush" },
+    preset: { stems: ["pink-carnation", "pink-carnation", "peony", "pink-tulip", "pink-tulip", "pink-rose", "lavender", "babys-breath", "eucalyptus"], wrap: "wide", paper: "blush", ribbon: "ivory", background: "blush" },
     messages: [
       "Thank you for everything, especially the things I never noticed. Love you, Mom.",
       "Happy Mother's Day to the original main character 🌷",
@@ -214,7 +214,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "Red roses are the definitive Valentine's flower, and red tulips say \"I declare my love.\" A digital Valentine's bouquet lets you send virtual roses instantly, schedule them to open on February 14, and attach a handwritten-style love note, all for free.",
     flowers: ["rose", "tulip", "peony", "carnation", "babys-breath"],
-    preset: { stems: ["red-rose", "red-rose", "red-rose", "red-rose", "red-tulip", "red-tulip", "red-carnation", "babys-breath", "babys-breath", "fern"], wrapper: "noir", ribbon: "cherry", background: "blush" },
+    preset: { stems: ["red-rose", "red-rose", "red-rose", "red-rose", "red-tulip", "red-tulip", "red-carnation", "babys-breath", "babys-breath", "fern"], wrap: "cone", paper: "noir", ribbon: "cherry", background: "blush" },
     messages: [
       "Roses are red, this bouquet is too, I'd send real ones but I'm broke. Love you 💌",
       "Be my valentine? (Correct answer: yes)",
@@ -224,7 +224,7 @@ export const OCCASIONS: Occasion[] = [
       "Happy Valentine's to the person who owns my heart and my hoodie.",
     ],
     faq: [
-      { q: "How do I send virtual roses?", a: "Open the Petalpost maker, add red roses, wrap them, write a note and tap send. You get a link to share anywhere." },
+      { q: "How do I send virtual roses?", a: "Open the Flower Bouquet Digital maker, add red roses, wrap them, write a note and tap send. You get a link to share anywhere." },
       { q: "How many roses should I send?", a: "Popular meanings: one rose for love at first sight, three for \"I love you\", and a dozen for \"be mine.\"" },
       { q: "Can I schedule it for February 14?", a: "Yes, set the open date to Valentine's Day and it will stay wrapped until then." },
     ],
@@ -238,7 +238,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "Pink and peach roses both mean gratitude, and hydrangeas stand for heartfelt thanks. A digital thank-you bouquet is a quick, thoughtful way to thank a teacher, coworker, host or friend, and it takes less than a minute to make.",
     flowers: ["rose", "hydrangea", "sunflower", "daisy"],
-    preset: { stems: ["peach-rose", "peach-rose", "pink-rose", "hydrangea", "pink-hydrangea", "daisy", "babys-breath", "eucalyptus", "ruscus"], wrapper: "kraft", ribbon: "sage", background: "cream" },
+    preset: { stems: ["peach-rose", "peach-rose", "pink-rose", "hydrangea", "pink-hydrangea", "daisy", "babys-breath", "eucalyptus", "ruscus"], wrap: "vase", paper: "kraft", ribbon: "sage", background: "cream" },
     messages: [
       "Thank you for showing up for me. It meant everything.",
       "Small flowers, big thank you 🙏",
@@ -262,7 +262,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "White lilies are the traditional sympathy flower and represent peace and remembrance. White roses, forget-me-nots and eucalyptus keep a condolence bouquet gentle and calm. Pair it with a short, simple message; there is no perfect thing to say, only a caring one.",
     flowers: ["lily", "rose", "forget-me-not", "poppy"],
-    preset: { stems: ["white-lily", "white-lily", "white-rose", "white-rose", "white-cosmos", "forget-me-not", "babys-breath", "eucalyptus", "eucalyptus"], wrapper: "cream", ribbon: "ivory", background: "sky" },
+    preset: { stems: ["white-lily", "white-lily", "white-rose", "white-rose", "white-cosmos", "forget-me-not", "babys-breath", "eucalyptus", "eucalyptus"], wrap: "wide", paper: "cream", ribbon: "ivory", background: "sky" },
     messages: [
       "Thinking of you and holding you close in my heart.",
       "I'm so sorry for your loss. I'm here whenever you need me.",
@@ -286,7 +286,7 @@ export const OCCASIONS: Occasion[] = [
     answer:
       "Congratulations bouquets should feel bold and celebratory: gerberas for cheer, sunflowers for success and stargazer lilies for ambition. A digital bouquet is perfect for new jobs, promotions, engagements, new homes and any win worth celebrating.",
     flowers: ["gerbera", "sunflower", "lily", "tulip", "poppy"],
-    preset: { stems: ["gerbera", "gerbera", "sunflower", "stargazer-lily", "yellow-tulip", "coral-peony", "poppy", "pampas", "ruscus"], wrapper: "lilac", ribbon: "gold", background: "butter" },
+    preset: { stems: ["gerbera", "gerbera", "sunflower", "stargazer-lily", "yellow-tulip", "coral-peony", "poppy", "pampas", "ruscus"], wrap: "box", paper: "lilac", ribbon: "gold", background: "butter" },
     messages: [
       "Look at you go! Congratulations 🎉",
       "New job? New level. So proud of you.",

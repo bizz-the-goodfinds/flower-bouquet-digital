@@ -1,18 +1,23 @@
-import { Caveat, Dancing_Script, Geist, Geist_Mono, Instrument_Serif, Reenie_Beanie } from "next/font/google";
+import { Bitcount_Single, Cutive_Mono, Geist, Geist_Mono, Handlee, Playfair_Display, Playwrite_CA_Guides, Sacramento } from "next/font/google";
 
-export const instrument = Instrument_Serif({
+/** Brand / headings */
+export const playfair = Playfair_Display({
   subsets: ["latin"],
+  // Headings only use regular weight; static 400 files are much smaller than the variable font.
   weight: "400",
   style: ["normal", "italic"],
-  variable: "--font-instrument",
+  variable: "--font-playfair",
   display: "swap",
 });
+/** UI and body copy */
 export const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 export const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
 
-// Handwriting fonts for the note card; only loaded on routes that show cards.
-const caveat = Caveat({ subsets: ["latin"], variable: "--font-caveat", display: "swap", preload: false });
-const reenie = Reenie_Beanie({ subsets: ["latin"], weight: "400", variable: "--font-reenie", display: "swap", preload: false });
-const dancing = Dancing_Script({ subsets: ["latin"], variable: "--font-dancing", display: "swap", preload: false });
+// Letter (note card) fonts; only loaded on routes that show cards. Playfair is shared with the site.
+const handlee = Handlee({ subsets: ["latin"], weight: "400", variable: "--font-handlee", display: "swap", preload: false });
+const playwrite = Playwrite_CA_Guides({ weight: "400", variable: "--font-playwrite", display: "swap" });
+const cutive = Cutive_Mono({ subsets: ["latin"], weight: "400", variable: "--font-cutive", display: "swap", preload: false });
+const sacramento = Sacramento({ subsets: ["latin"], weight: "400", variable: "--font-sacramento", display: "swap", preload: false });
+const bitcount = Bitcount_Single({ subsets: ["latin"], variable: "--font-bitcount", display: "swap", preload: false });
 
-export const cardFontVars = `${caveat.variable} ${reenie.variable} ${dancing.variable}`;
+export const cardFontVars = [handlee, playwrite, cutive, sacramento, bitcount].map((f) => f.variable).join(" ");
