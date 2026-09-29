@@ -1,4 +1,4 @@
-# Digital Flower Bouquet — Product & Build Plan
+# Flower Bouquet Digital — Product & Build Plan
 
 Status (2026-09-29): v1 is built. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
 
