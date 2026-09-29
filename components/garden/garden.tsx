@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, Check, Copy, Eye, Flower2, MessageCircle, Pencil, Share, Trash2, Undo2, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, Copy, Eye, Flower2, MessageCircle, Pencil, Share, Trash2, Undo2, Users, X } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { BloomLoader, BouquetCardSkeleton, MiniBloom } from "@/components/ui/bloom-loader";
@@ -11,7 +11,8 @@ import { EnvelopeArt } from "@/components/reveal/envelope";
 import type { Design } from "@/lib/bouquet/composition";
 import type { CardStyle } from "@/lib/bouquet/card";
 import type { EnvelopeLook } from "@/lib/bouquet/envelope";
-import { chatKey, conversationNames, type ChatMessage, type Conversation } from "@/lib/bouquet/chat";
+import { ago, chatKey, reactionSummary, type ChatMessage, type Conversation } from "@/lib/bouquet/chat";
+import { BACKGROUNDS } from "@/lib/bouquet/catalog";
 import { getMine, getReceived, getSeen, removeMine, removeReceived, useMine } from "@/lib/local";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { inboxChannel, useInbox } from "@/lib/realtime";
@@ -32,7 +33,7 @@ type Sent = {
   thread: string;
   replyTo: string | null;
   conversations: Conversation[];
-  replies: { slug: string; from: string; createdAt: string }[];
+  replies: { slug: string; from: string; createdAt: string; design: Design | null; envelope: EnvelopeLook }[];
 };
 
 type Received = {
@@ -346,64 +347,136 @@ function NewDot({ n }: { n?: number }) {
   return <span className="rounded-full bg-petal-deep px-1.5 py-px font-mono text-[10px] text-cream">{n && n > 1 ? `${n} new` : "new"}</span>;
 }
 
+/** Bouquet thumbnail on its own background colour, like a little framed print. */
+function Thumb({ design, envelope, from, onClick, href, label }: { design: Design | null; envelope?: EnvelopeLook; from?: string; onClick?: () => void; href?: string; label: string }) {
+  const bg = design ? (BACKGROUNDS[design.background] ?? BACKGROUNDS.cream).fill : "var(--color-cream)";
+  const art = design ? <BouquetSvg design={design} showBackground={false} className="h-full w-auto" label="" /> : <EnvelopeArt look={envelope} initial={from} className="w-[88%]" />;
+  const cls = "grid h-28 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl ring-1 ring-line transition hover:-rotate-2 hover:ring-ink";
+  return href ? (
+    <Link href={href} className={cls} style={{ background: bg }} aria-label={label}>
+      {art}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls} style={{ background: bg }} aria-label={label}>
+      {art}
+    </button>
+  );
+}
+
+function Stat({ children }: { children: React.ReactNode }) {
+  return <span className="inline-flex items-center gap-1 rounded-full bg-cream px-2 py-0.5 text-xs text-ink/80">{children}</span>;
+}
+
+/** A tappable activity line inside a card (reactions, a bouquet sent back, a chat reply). */
+function ActivityRow({ lead, title, sub, action, badge, onClick, href }: { lead: React.ReactNode; title: React.ReactNode; sub?: React.ReactNode; action: string; badge?: React.ReactNode; onClick?: () => void; href?: string }) {
+  const body = (
+    <>
+      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-paper ring-1 ring-line">{lead}</span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="truncate text-sm font-medium">{title}</span>
+          {badge}
+        </span>
+        {sub && <span className="block truncate text-xs text-ink-soft">{sub}</span>}
+      </span>
+      <span className="shrink-0 rounded-full bg-ink px-3 py-1.5 text-xs font-medium text-cream shadow-[2px_2px_0_0_var(--color-petal)] transition group-hover:-translate-y-0.5">{action}</span>
+    </>
+  );
+  const cls = "group flex w-full items-center gap-3 rounded-2xl bg-cream px-2.5 py-2 text-left transition hover:bg-petal/20";
+  return href ? (
+    <a href={href} className={cls} data-clarity-mask="true">
+      {body}
+    </a>
+  ) : (
+    <button type="button" onClick={onClick} className={cls} data-clarity-mask="true">
+      {body}
+    </button>
+  );
+}
+
+const cardCls = "flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper";
+const footCls = "mt-auto flex flex-wrap items-center gap-1 border-t border-line px-3 py-2";
+const actCls = "btn-ghost min-h-10 !px-3 !py-1.5 text-sm";
+
 function SentCard({ b, unread, copied, onCopy, onDelete, onPreview }: { b: Sent; unread: number; copied: boolean; onCopy: () => void; onDelete: () => void; onPreview: () => void }) {
-  const names = conversationNames(b.conversations, b.card.to);
   const reactors = b.conversations.filter((c) => lastRecipientMsg(c)).sort((x, y) => lastRecipientMsg(y)!.at.localeCompare(lastRecipientMsg(x)!.at));
-  const latest = reactors[0] ? [...reactors[0].messages].reverse().find((m) => m.author === "recipient" && m.emoji)?.emoji : null;
+  const emojis = [...new Set(reactors.flatMap((c) => [...c.messages].reverse().filter((m) => m.author === "recipient" && m.emoji).map((m) => m.emoji!)))].slice(0, 2);
+  const latestAt = reactors[0] ? lastRecipientMsg(reactors[0])!.at : null;
+  const latestText = reactors[0] ? [...reactors[0].messages].reverse().find((m) => m.author === "recipient" && m.text)?.text : null;
   const links = b.conversations.filter((c) => c.id.startsWith("l:"));
   const canShare = typeof navigator !== "undefined" && "share" in navigator;
   return (
-    <article className="flex h-full min-w-0 flex-col rounded-[var(--radius-card)] border border-line bg-paper p-4">
-      <div className="flex gap-4">
-        <button type="button" onClick={onPreview} className="w-24 shrink-0 rounded-xl transition hover:-rotate-2" aria-label={`Preview bouquet for ${b.card.to || "someone"}`}>
-          <BouquetSvg design={b.design} className="w-full rounded-xl" label="" />
-        </button>
+    <article className={cardCls}>
+      <div className="flex gap-4 p-4">
+        <Thumb design={b.design} onClick={onPreview} label={`Preview bouquet for ${b.card.to || "someone"}`} />
         <div className="min-w-0 flex-1">
-          <Direction kind="sent" />
-          <p className="mt-1 truncate font-display text-2xl leading-tight" data-clarity-mask="true">
+          <div className="flex items-center gap-2">
+            <Direction kind="sent" />
+            <span className="text-xs text-ink-soft">{fmtDate(b.createdAt)}</span>
+          </div>
+          <p className="mt-1.5 truncate font-display text-2xl leading-tight" data-clarity-mask="true">
             for {b.card.to || "someone"}
           </p>
-          <p className="mt-1 text-sm text-ink-soft">{fmtDate(b.createdAt)}</p>
-          <p className="mt-1.5 flex items-center gap-1.5 text-sm">
-            <Eye className="size-4" aria-hidden /> {b.views} {b.views === 1 ? "open" : "opens"}
-            {links.length > 0 && <span className="text-ink-soft">· {links.filter((l) => l.openedAt).length}/{links.length} people</span>}
-          </p>
-          {b.expiresAt && <p className="mt-1 text-xs text-ink-soft">Expires {fmtDate(b.expiresAt)}</p>}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <Stat>
+              <Eye className="size-3.5" aria-hidden /> {b.views} {b.views === 1 ? "open" : "opens"}
+            </Stat>
+            {links.length > 0 && (
+              <Stat>
+                <Users className="size-3.5" aria-hidden /> {links.filter((l) => l.openedAt).length}/{links.length} opened
+              </Stat>
+            )}
+            {b.expiresAt && <Stat>⏳ {fmtDate(b.expiresAt)}</Stat>}
+          </div>
         </div>
       </div>
       {(reactors.length > 0 || b.replies.length > 0) && (
-        <div className="mt-3 space-y-1.5 border-t border-line pt-3 text-sm" data-clarity-mask="true">
+        <div className="space-y-2 px-4 pb-4">
           {reactors.length > 0 && (
-            <button type="button" onClick={onPreview} className="flex w-full items-center gap-2 rounded-lg text-left hover:text-petal-deep">
-              <MessageCircle className="size-4 shrink-0" aria-hidden />
-              <span className="min-w-0 flex-1 truncate">
-                {names.get(reactors[0].id)}
-                {reactors.length > 1 ? ` and ${reactors.length - 1} other${reactors.length > 2 ? "s" : ""}` : ""} reacted {latest ?? ""}
-              </span>
-              {unread > 0 && <NewDot n={unread} />}
-            </button>
+            <ActivityRow
+              onClick={onPreview}
+              lead={
+                <span className="flex -space-x-1 text-[15px] leading-none">
+                  {emojis.length ? emojis.map((e) => <span key={e}>{e}</span>) : <MessageCircle className="size-4" aria-hidden />}
+                </span>
+              }
+              title={reactionSummary(reactors, b.card.to)}
+              sub={
+                <>
+                  {latestText ? `“${latestText}”` : "Tap to see the chat"}
+                  {latestAt ? ` · ${ago(latestAt)}` : ""}
+                </>
+              }
+              badge={unread > 0 ? <NewDot n={unread} /> : null}
+              action="Chat"
+            />
           )}
           {b.replies.map((r) => (
-            <a key={r.slug} href={`/b/${r.slug}`} className="flex items-center gap-2 hover:text-petal-deep">
-              <Flower2 className="size-4 shrink-0" aria-hidden />
-              <span className="truncate">{r.from || "They"} sent one back 💐</span>
-            </a>
+            <ActivityRow
+              key={r.slug}
+              href={`/b/${r.slug}`}
+              lead={r.design ? <BouquetSvg design={r.design} className="h-10 w-auto" label="" /> : <EnvelopeArt look={r.envelope} initial={r.from} className="w-9" />}
+              title={`${r.from || "They"} sent one back 💐`}
+              sub={`In reply to this · ${ago(r.createdAt)}`}
+              action="Open"
+            />
           ))}
         </div>
       )}
-      <div className="mt-auto flex flex-wrap items-center gap-1 pt-4">
-        <button type="button" onClick={onPreview} className="btn-ghost min-h-11 border border-line !py-1.5 text-sm">
-          <Eye className="size-3.5" aria-hidden /> Preview
+      <div className={footCls}>
+        <button type="button" onClick={onPreview} className={actCls}>
+          <Eye className="size-4" aria-hidden /> Preview
         </button>
-        <Link href={`/create?edit=${b.slug}`} className="btn-ghost min-h-11 border border-line !py-1.5 text-sm">
-          <Pencil className="size-3.5" aria-hidden /> Edit
+        <Link href={`/create?edit=${b.slug}`} className={actCls}>
+          <Pencil className="size-4" aria-hidden /> Edit
         </Link>
-        <button className="btn-ghost min-h-11 border border-line !py-1.5 text-sm" aria-live="polite" onClick={onCopy}>
-          {copied ? <Check className="size-3.5" aria-hidden /> : canShare ? <Share className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+        <button className={actCls} aria-live="polite" onClick={onCopy}>
+          {copied ? <Check className="size-4" aria-hidden /> : canShare ? <Share className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
           {copied ? "Copied" : canShare ? "Share" : "Copy"}
         </button>
+        <span className="flex-1" />
         <Tooltip label="Delete">
-          <button className="btn-ghost ml-auto min-h-11 !py-1.5 text-sm text-petal-deep" onClick={onDelete} aria-label={`Delete bouquet for ${b.card.to || "someone"}`}>
+          <button className="btn-ghost grid size-10 place-items-center !p-0 text-petal-deep" onClick={onDelete} aria-label={`Delete bouquet for ${b.card.to || "someone"}`}>
             <Trash2 className="size-4" aria-hidden />
           </button>
         </Tooltip>
@@ -416,41 +489,51 @@ function ReceivedCard({ r, unread, onRemove }: { r: Received; unread: boolean; o
   const href = `/b/${r.slug}${r.link ? `?r=${r.link}` : ""}`;
   const last = r.chat.last;
   return (
-    <article className="flex h-full min-w-0 flex-col rounded-[var(--radius-card)] border border-line bg-paper p-4">
-      <div className="flex gap-4">
-        <Link href={href} className="grid w-24 shrink-0 place-items-center rounded-xl transition hover:-rotate-2" aria-label={`Open bouquet from ${r.from || "someone"}`}>
-          {r.design ? <BouquetSvg design={r.design} className="w-full rounded-xl" label="" /> : <EnvelopeArt look={r.envelope} initial={r.from} />}
-        </Link>
+    <article className={cardCls}>
+      <div className="flex gap-4 p-4">
+        <Thumb design={r.design} envelope={r.envelope} from={r.from} href={href} label={`Open bouquet from ${r.from || "someone"}`} />
         <div className="min-w-0 flex-1">
-          <Direction kind="received" />
-          <p className="mt-1 truncate font-display text-2xl leading-tight" data-clarity-mask="true">
+          <div className="flex items-center gap-2">
+            <Direction kind="received" />
+            <span className="text-xs text-ink-soft">{fmtDate(r.createdAt)}</span>
+          </div>
+          <p className="mt-1.5 truncate font-display text-2xl leading-tight" data-clarity-mask="true">
             from {r.from || "someone"}
           </p>
-          <p className="mt-1 text-sm text-ink-soft">{r.locked && r.revealAt ? `Opens ${fmtDate(r.revealAt)} ⏳` : fmtDate(r.createdAt)}</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {r.locked && r.revealAt ? <Stat>⏳ Opens {fmtDate(r.revealAt)}</Stat> : <Stat>💐 for {r.to || "you"}</Stat>}
+            {r.replyTo && <Stat>↩ a reply</Stat>}
+          </div>
         </div>
       </div>
-      {last && (
-        <Link href={href} className="mt-3 flex items-center gap-2 border-t border-line pt-3 text-sm hover:text-petal-deep" data-clarity-mask="true">
-          <MessageCircle className="size-4 shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1 truncate">
-            {last.author === "sender" ? `${r.from || "They"}: ${last.text ?? last.emoji}` : `You: ${last.emoji ?? ""} ${last.text ?? ""}`}
-          </span>
-          {unread && <NewDot />}
+      <div className="px-4 pb-4">
+        {last ? (
+          <ActivityRow
+            href={href}
+            lead={last.emoji ? <span className="text-lg leading-none">{last.emoji}</span> : <MessageCircle className="size-4" aria-hidden />}
+            title={last.author === "sender" ? `${r.from || "They"} replied` : "You reacted"}
+            sub={
+              <>
+                {last.text ? `“${last.text}”` : "Open to keep chatting"} · {ago(last.at)}
+              </>
+            }
+            badge={unread ? <NewDot /> : null}
+            action="Chat"
+          />
+        ) : (
+          <ActivityRow href={href} lead={<MessageCircle className="size-4" aria-hidden />} title={`Say thanks to ${r.from || "them"}`} sub="React or send a message" action="Open" />
+        )}
+      </div>
+      <div className={footCls}>
+        <Link href={href} className={actCls}>
+          <Eye className="size-4" aria-hidden /> Open
         </Link>
-      )}
-      <div className="mt-auto flex flex-wrap items-center gap-1 pt-4">
-        <Link href={href} className="btn-ghost min-h-11 border border-line !py-1.5 text-sm">
-          Open
+        <Link href={`/create?replyTo=${r.slug}${r.from ? `&to=${encodeURIComponent(r.from)}` : ""}`} onClick={() => track("send_back_clicked", { where: "garden" })} className={actCls}>
+          <Flower2 className="size-4" aria-hidden /> Send one back
         </Link>
-        <Link
-          href={`/create?replyTo=${r.slug}${r.from ? `&to=${encodeURIComponent(r.from)}` : ""}`}
-          onClick={() => track("send_back_clicked", { where: "garden" })}
-          className="btn-ghost min-h-11 border border-line !py-1.5 text-sm"
-        >
-          <Flower2 className="size-3.5" aria-hidden /> Send one back
-        </Link>
+        <span className="flex-1" />
         <Tooltip label="Remove from list">
-          <button className="btn-ghost ml-auto min-h-11 !py-1.5 text-sm text-ink-soft" onClick={onRemove} aria-label={`Remove bouquet from ${r.from || "someone"}`}>
+          <button className="btn-ghost grid size-10 place-items-center !p-0 text-ink-soft" onClick={onRemove} aria-label={`Remove bouquet from ${r.from || "someone"}`}>
             <X className="size-4" aria-hidden />
           </button>
         </Tooltip>

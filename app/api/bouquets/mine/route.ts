@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { currentUserId } from "@/lib/supabase/server";
 import { SOURCE_COLUMNS, toSource, type Row } from "@/lib/server/bouquets";
 import { groupConversations, type Msg } from "@/lib/server/chat";
+import { normalizeDesign } from "@/lib/bouquet/composition";
+import { normalizeEnvelope } from "@/lib/bouquet/envelope";
 import { json, tokenMatches } from "@/lib/server/security";
 
 const bodySchema = z.object({
@@ -35,11 +37,11 @@ export async function POST(req: Request) {
   const { data: replyRows } = seen.size
     ? await db
         .from("bouquets")
-        .select("slug, reply_to, sender_name, created_at, reveal_at")
+        .select("slug, reply_to, sender_name, created_at, reveal_at, composition, wrapper, background, card_style")
         .in("reply_to", [...seen.keys()])
         .is("deleted_at", null)
         .eq("is_flagged", false)
-        .returns<{ slug: string; reply_to: string; sender_name: string | null; created_at: string; reveal_at: string | null }[]>()
+        .returns<(Pick<Row, "slug" | "composition" | "wrapper" | "background" | "card_style" | "created_at" | "reveal_at"> & { reply_to: string; sender_name: string | null })[]>()
     : { data: [] };
 
   const bouquets = [...seen.values()]
@@ -52,7 +54,17 @@ export async function POST(req: Request) {
       thread: b.thread_id ?? b.id,
       replyTo: b.reply_to ?? null,
       conversations: groupConversations(b.reactions ?? [], [...(b.bouquet_links ?? [])]),
-      replies: (replyRows ?? []).filter((r) => r.reply_to === b.slug).map((r) => ({ slug: r.slug, from: r.sender_name ?? "", createdAt: r.created_at })),
+      replies: (replyRows ?? []).filter((r) => r.reply_to === b.slug).map((r) => {
+        const locked = Boolean(r.reveal_at && new Date(r.reveal_at) > new Date());
+        return {
+          slug: r.slug,
+          from: r.sender_name ?? "",
+          createdAt: r.created_at,
+          // Scheduled replies keep their flowers hidden until they open.
+          design: locked ? null : normalizeDesign({ items: r.composition.items, wrapper: r.wrapper, paper: r.card_style.paper, background: r.background, ribbon: r.card_style.ribbon ?? "cherry" }),
+          envelope: normalizeEnvelope(r.card_style.envelope),
+        };
+      }),
     }));
   return json({ bouquets, signedIn: Boolean(uid) });
 }
