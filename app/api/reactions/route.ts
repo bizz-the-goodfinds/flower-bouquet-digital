@@ -24,14 +24,15 @@ export async function POST(req: Request) {
 
   const db = supabaseAdmin();
   const hash = ipHash(req);
-  const { count } = await db
-    .from("reactions")
-    .select("id", { count: "exact", head: true })
-    .eq("ip_hash", hash)
-    .gte("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());
+  const [{ count }, { data: b }] = await Promise.all([
+    db
+      .from("reactions")
+      .select("id", { count: "exact", head: true })
+      .eq("ip_hash", hash)
+      .gte("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString()),
+    db.from("bouquets").select("id").eq("slug", slug).is("deleted_at", null).maybeSingle<{ id: string }>(),
+  ]);
   if ((count ?? 0) >= 30) return json({ error: "Slow down a little 🙂" }, 429);
-
-  const { data: b } = await db.from("bouquets").select("id").eq("slug", slug).is("deleted_at", null).maybeSingle<{ id: string }>();
   if (!b) return json({ error: "Not found" }, 404);
   if (conversation && !(await conversationAllowed(b.id, conversation))) return json({ error: "Not found" }, 404);
   const { data, error } = await db
