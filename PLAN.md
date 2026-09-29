@@ -87,7 +87,7 @@ Every received bouquet is an ad for the product. The "send one back" button is t
 
 | Layer | Choice | Why |
 |---|---|---|
-| Framework | Next.js 15 (App Router, React 19, TypeScript) | SSG/SSR for SEO, route handlers, OG image generation, best on Vercel |
+| Framework | Next.js 16 (App Router, Turbopack, React 19, TypeScript) | SSG/SSR for SEO, route handlers, OG image generation, best on Vercel |
 | Styling | Tailwind CSS v4 + CSS variables for tokens | Fast, themeable |
 | Animation | Motion (Framer Motion) | Unwrap / bloom / card flip |
 | Builder canvas | SVG + pointer events (custom), `@use-gesture/react` for pinch/rotate | Crisp at any size, easy PNG export, light bundle vs Konva |
@@ -303,16 +303,71 @@ Realistic goal: Lighthouse 100/100/100/100 on landing and content pages, all Cor
 ### Content plan at launch
 - ~25 flower meaning pages, ~12 occasion pages, ~8 guides, FAQ. All written for humans first, with presets that link straight into the builder.
 
+### Status (2026-09-30)
+Local production build, Lighthouse 12:
+
+| | Mobile | Desktop |
+|---|---|---|
+| Accessibility | 100 | 100 |
+| Best practices | 100 | 100 |
+| SEO | 100 | 100 |
+| Performance | 92–94 (`/create` 85) | 99–100 |
+
+- **Done:**
+  - Every structured-data type above except SearchAction (there's no site search yet).
+  - A direct answer at the top of every content page, and FAQ schema on the home, FAQ, occasion, flower and guide pages.
+  - `robots.txt` welcomes AI crawlers, and `llms.txt` + `llms-full.txt` are generated from the content files.
+  - The same one-sentence product definition (`site.definition`) is used everywhere.
+- **Mobile performance gap:** Lighthouse's slow-4G simulation counts the framework JavaScript, which caps the score. The real LCP is about 150ms. Getting to 100 would mean cutting React/Next runtime code, which isn't worth it. The builder is heavy on purpose.
+- **Not 100 on purpose:** `/garden` is private (noindex), so its SEO score stays low by design.
+- **Still open:**
+  - Submit the sitemap to Search Console and Bing.
+  - Directory listings (Product Hunt and similar).
+  - A citable "most sent flowers" stat from our own anonymized data.
+  - Rankings and AI citations depend on content and backlinks over time; code can't guarantee them.
+
 ---
 
 ## 9. Analytics & tracking
 
-- **Microsoft Clarity**: heatmaps + session replays. Note text and names masked (`data-clarity-mask`) — private messages must never be recorded.
-- **Firebase Analytics (GA4)**: funnels and retention.
-- **Vercel Speed Insights + Analytics**: real-user Web Vitals.
-- Cookie / consent banner (Google Consent Mode v2) — required if you have EU/UK users; recommended for India DPDP too.
+- **Microsoft Clarity:** heatmaps and session replays. Note text and names are masked (`data-clarity-mask`); private messages must never be recorded.
+- **Firebase Analytics (GA4):** funnels, retention and traffic sources.
+- **Vercel Speed Insights + Analytics:** real-user Web Vitals (rendered only on Vercel).
 
-Event taxonomy: the full, current list lives in README.md → Analytics. It covers automatic events (`cta_clicked`, `nav_clicked`, `select_content`, `web_vitals`, `faq_opened`, `page_not_found`), the builder funnel, sharing, the recipient view and My bouquets. Share links carry `utm_source=<channel>&utm_medium=share` so opens from in-app browsers are attributed.
+### Loading and consent (built)
+- **EU/UK (detected by timezone):** opt-in banner. Nothing loads until the visitor accepts.
+- **Elsewhere:** a notice with opt-out.
+  - GA uses first-party cookies and starts about 2s after page load, so visitors who never interact are still counted.
+  - Clarity sets third-party cookies, so it waits for the first tap, scroll or key.
+- Crawlers and automated browsers are skipped.
+- Events fired before analytics load are queued.
+
+### What is tracked (built)
+The full event and parameter reference is in README.md → Analytics. In short:
+- **Automatic, site-wide** (`components/analytics/listeners.tsx`): `cta_clicked` (with placement: hero, header, footer, section), `nav_clicked`, `select_content` (occasion, flower or guide opened), `faq_opened`, `mobile_menu_opened`, `web_vitals`, `page_not_found`. Any element can be tracked by adding `data-track="event"` and `data-track-*` params.
+- **Builder funnel:** opened, preset, flowers added/removed, wrap, shuffle, undo/redo, step changes, message ideas, preview, send failures, captcha failures.
+  - `bouquet_created` carries every design choice (template, font, note mode, envelope, stickers, expiry, wrap, reveal, reply, message length).
+- **Sharing:** channel clicks, personal links created/deleted, downloads and export failures.
+- **Recipient:** viewed (with source, occasion, personal link), locked view, unwrapped, note opened/pinned, chat toggled, reactions, replies, send-back, reports.
+- **My bouquets:** tabs, previews, deletes, claims, sign-in/sign-up (including failures), password resets, sync prompt.
+
+### Traffic attribution (built)
+- Share links carry `utm_source=<channel>&utm_medium=share`.
+  - Channels: whatsapp, telegram, x, sms, email, native_share, qr.
+  - Without these tags, opens from in-app browsers (which send no referrer) would show as "direct".
+- The copy-link URL stays clean.
+
+### GA4 admin (to do once)
+- Register `placement`, `occasion`, `source`, `channel`, `flower_slug`, `metric_name` and `content_type` as custom dimensions.
+- Mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events.
+- Keep Enhanced measurement → "Page changes based on browser history events" on.
+
+### Questions the data should answer
+- Where do bouquets get lost? The drop-off from `builder_opened` → `builder_step: card` → `preview_opened` → `bouquet_created`.
+- Which options and presets lead to sent bouquets?
+- Which share channel brings the most opens? `bouquet_viewed.source` shows this.
+- How many recipients unwrap, react or send one back?
+- Which landing sections and content pages drive `cta_clicked`?
 
 North-star metric: **bouquets opened per week**. Viral coefficient = send-back bouquets created ÷ bouquets opened.
 
