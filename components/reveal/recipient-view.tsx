@@ -51,6 +51,7 @@ export function RecipientView({
   const bg = BACKGROUNDS[bouquet.design.background] ?? BACKGROUNDS.cream;
   const dark = Boolean(bg.dark) && open;
   const exp = useExport({ design: bouquet.design, to: bouquet.to, from: bouquet.from, message: bouquet.message, style: bouquet.style }, "recipient");
+  const hasNote = Boolean(bouquet.to || bouquet.from || bouquet.message);
   const sendBack = `/create?replyTo=${bouquet.slug}${bouquet.from ? `&to=${encodeURIComponent(bouquet.from)}` : ""}`;
 
   useEffect(() => {
@@ -164,54 +165,64 @@ export function RecipientView({
             key="open"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-4 px-4 pb-8 lg:grid-cols-[1.05fr_1fr] lg:gap-10 ${preview ? "" : "lg:h-[calc(100dvh-4.25rem)] lg:pb-4"}`}
+            className={`mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-6 px-4 pb-8 pt-2 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 ${preview ? "lg:h-[calc(100dvh-6rem)]" : "lg:h-[calc(100dvh-4.25rem)]"} lg:pb-4`}
           >
             {!reduce && <PetalRain dark={Boolean(bg.dark)} />}
-            <div className="flex min-h-0 min-w-0 justify-center lg:h-full">
+            {/* The gift: bouquet with the note tucked underneath. */}
+            <section aria-label="Your bouquet" className="flex min-h-0 min-w-0 flex-col items-center lg:h-full lg:justify-center lg:overflow-y-auto lg:py-2">
               <BouquetSvg
                 design={bouquet.design}
                 bloom
                 showBackground={false}
                 label={`A bouquet for ${bouquet.to || "you"}`}
-                className="h-auto w-full max-w-[460px] lg:h-full lg:max-h-[calc(100dvh-6rem)] lg:w-auto lg:max-w-full"
+                className={`h-auto w-full max-w-[400px] shrink-0 lg:w-auto lg:max-w-full ${hasNote ? "lg:h-[calc(100dvh-19rem)]" : "lg:h-[calc(100dvh-8rem)]"}`}
               />
-            </div>
-            <div className="relative z-10 flex min-h-0 min-w-0 flex-col justify-center gap-4 lg:max-h-full lg:overflow-y-auto lg:py-4">
-              {(bouquet.to || bouquet.from || bouquet.message) && (
+              {hasNote && (
                 <motion.div
                   initial={reduce ? { opacity: 0 } : { opacity: 0, y: 60, rotate: 4 }}
                   animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, rotate: -1.5 }}
                   transition={{ delay: reduce ? 0.2 : 1.6, type: "spring", stiffness: 120, damping: 16 }}
-                  className="mx-auto w-full max-w-md px-2"
+                  className="relative z-10 -mt-10 w-full max-w-md shrink-0 px-2 sm:-mt-14"
                 >
                   <NoteCard to={bouquet.to} from={bouquet.from} message={bouquet.message} style={bouquet.style} />
                 </motion.div>
               )}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0.3 : 2.4 }} className="mx-auto w-full max-w-md">
-                <div className="space-y-3 text-center">
-                  {sender ? (
-                    <>
-                      <SenderChat slug={bouquet.slug} token={sender.token} to={bouquet.to} conversations={sender.conversations} refreshKey={sender.refreshKey} />
-                      {sender.extra}
-                    </>
-                  ) : preview ? (
-                    <PreviewChat />
-                  ) : mine ? (
-                    <p className={`rounded-2xl px-4 py-3 text-sm ${bg.dark ? "bg-cream/10 text-cream" : "bg-paper/80 text-ink"}`}>
-                      This is your bouquet 💐 See opens and chat with {bouquet.to || "them"} in{" "}
-                      <Link href="/garden" className="underline underline-offset-2">
-                        My bouquets
-                      </Link>
-                      .
-                    </p>
-                  ) : (
-                    <RecipientChat slug={bouquet.slug} conversation={conversation} from={bouquet.from} />
-                  )}
-                  {thread.length > 0 && <ThreadStrip thread={thread} dark={Boolean(bg.dark)} />}
-                  <Footer slug={bouquet.slug} dark={Boolean(bg.dark)} hideReport={mine || Boolean(preview)} />
-                </div>
-              </motion.div>
-            </div>
+            </section>
+
+            {/* The conversation: chat, thread and extras in their own panel. */}
+            <motion.aside
+              aria-label="Reactions and chat"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: reduce ? 0.3 : 2.2 }}
+              className={`relative z-10 flex min-h-0 min-w-0 flex-col gap-3 rounded-[1.75rem] border p-3 backdrop-blur-sm sm:p-4 lg:max-h-full lg:self-center lg:overflow-y-auto ${
+                bg.dark ? "border-cream/20 bg-cream/10 text-cream" : "border-line bg-paper/70 text-ink"
+              }`}
+            >
+              <p className={`label px-1 ${bg.dark ? "!text-cream/70" : ""}`}>{sender ? "Reactions & chat" : preview ? "Their side" : mine ? "Your bouquet" : `Talk to ${bouquet.from || "them"}`}</p>
+              {sender ? (
+                <>
+                  <SenderChat slug={bouquet.slug} token={sender.token} to={bouquet.to} conversations={sender.conversations} refreshKey={sender.refreshKey} />
+                  {sender.extra}
+                </>
+              ) : preview ? (
+                <PreviewChat />
+              ) : mine ? (
+                <p className={`rounded-2xl px-4 py-3 text-sm ${bg.dark ? "bg-cream/10" : "bg-paper"}`}>
+                  This is your bouquet 💐 See opens and chat with {bouquet.to || "them"} in{" "}
+                  <Link href="/garden" className="underline underline-offset-2">
+                    My bouquets
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <RecipientChat slug={bouquet.slug} conversation={conversation} from={bouquet.from} />
+              )}
+              {thread.length > 0 && <ThreadStrip thread={thread} dark={Boolean(bg.dark)} />}
+              <div className="pt-1 text-center">
+                <Footer slug={bouquet.slug} dark={Boolean(bg.dark)} hideReport={mine || Boolean(preview)} />
+              </div>
+            </motion.aside>
           </motion.div>
         )}
       </AnimatePresence>
