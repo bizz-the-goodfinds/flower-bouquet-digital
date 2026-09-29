@@ -21,6 +21,30 @@ const HEADS = [
   { x: 84, y: 46, color: "#C9B8F2", delay: ".5s" },
 ] as const;
 
+/** The looping mini bouquet: stems grow, flowers bloom one by one, the bow is tied. */
+export function BouquetMark({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 120 140" className={className} aria-hidden>
+      <path d="M22 74 L98 74 L68 134 L52 134Z" fill="#D2AE85" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+      {HEADS.map((h) => (
+        <path key={h.x} d={`M60 104 Q${(60 + h.x) / 2} ${(104 + h.y) / 2 + 6} ${h.x} ${h.y}`} className="pp-load-stem" style={{ animationDelay: h.delay }} fill="none" stroke="#6E9C63" strokeWidth="3.5" strokeLinecap="round" pathLength={1} />
+      ))}
+      {HEADS.map((h) => (
+        <g key={h.x} transform={`translate(${h.x} ${h.y})`}>
+          <g className="pp-load-head" style={{ animationDelay: h.delay }}>
+            <Petals color={h.color} r={h.x === 60 ? 9 : 7.5} />
+          </g>
+        </g>
+      ))}
+      <path d="M28 88 C44 94 76 94 92 88 L70 134 L50 134Z" fill="#E6CFAE" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+      <g className="pp-load-bow">
+        <path d="M60 94 C52 86 44 88 46 94 C48 100 56 98 60 94Z M60 94 C68 86 76 88 74 94 C72 100 64 98 60 94Z" fill="#E8553E" stroke={INK} strokeWidth="1.8" />
+        <circle cx="60" cy="94" r="3" fill="#B83A28" stroke={INK} strokeWidth="1.5" />
+      </g>
+    </svg>
+  );
+}
+
 const STEPS = ["Picking the freshest stems…", "Arranging your flowers…", "Tying the ribbon…", "Sealing the envelope…"];
 
 /**
@@ -42,24 +66,7 @@ export function BloomLoader({ label, steps = STEPS, delay = 180, className = "" 
   const text = step === 0 && label ? label : steps[(step - (label ? 1 : 0)) % steps.length];
   return (
     <div role="status" aria-live="polite" className={`flex flex-col items-center gap-3 text-center transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0"} ${className}`}>
-      <svg viewBox="0 0 120 140" className="h-28 w-24" aria-hidden>
-        <path d="M22 74 L98 74 L68 134 L52 134Z" fill="#D2AE85" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
-        {HEADS.map((h) => (
-          <path key={h.x} d={`M60 104 Q${(60 + h.x) / 2} ${(104 + h.y) / 2 + 6} ${h.x} ${h.y}`} className="pp-load-stem" style={{ animationDelay: h.delay }} fill="none" stroke="#6E9C63" strokeWidth="3.5" strokeLinecap="round" pathLength={1} />
-        ))}
-        {HEADS.map((h) => (
-          <g key={h.x} transform={`translate(${h.x} ${h.y})`}>
-            <g className="pp-load-head" style={{ animationDelay: h.delay }}>
-              <Petals color={h.color} r={h.x === 60 ? 9 : 7.5} />
-            </g>
-          </g>
-        ))}
-        <path d="M28 88 C44 94 76 94 92 88 L70 134 L50 134Z" fill="#E6CFAE" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
-        <g className="pp-load-bow">
-          <path d="M60 94 C52 86 44 88 46 94 C48 100 56 98 60 94Z M60 94 C68 86 76 88 74 94 C72 100 64 98 60 94Z" fill="#E8553E" stroke={INK} strokeWidth="1.8" />
-          <circle cx="60" cy="94" r="3" fill="#B83A28" stroke={INK} strokeWidth="1.5" />
-        </g>
-      </svg>
+      <BouquetMark className="h-28 w-24" />
       <p key={text} className="pp-load-label font-display text-xl text-ink/80 italic">
         {text}
       </p>
@@ -81,17 +88,16 @@ export function Shimmer({ className = "" }: { className?: string }) {
   return <div aria-hidden className={`pp-shimmer rounded-[var(--radius-card)] ${className}`} />;
 }
 
-/** Skeleton of a bouquet card (garden lists). */
+/** Skeleton of a bouquet card (garden lists): a bouquet building itself where the thumbnail will be. */
 export function BouquetCardSkeleton() {
   return (
     <div aria-hidden className="flex gap-4 rounded-[var(--radius-card)] border border-line bg-paper p-4">
       <div className="relative grid h-28 w-24 shrink-0 place-items-center overflow-hidden rounded-xl">
-        <Shimmer className="absolute inset-0 !rounded-xl" />
-        <svg viewBox="-12 -12 24 24" className="pp-load-bud relative size-8 text-petal" aria-hidden>
-          <Petals color="currentColor" r={5.5} />
-        </svg>
+        <Shimmer className="absolute inset-0 !rounded-xl opacity-70" />
+        <BouquetMark className="relative h-24 w-20" />
       </div>
       <div className="flex-1 space-y-2 pt-1">
+        <Shimmer className="h-4 w-16 !rounded-full" />
         <Shimmer className="h-6 w-3/4 !rounded-lg" />
         <Shimmer className="h-4 w-1/3 !rounded-lg" />
         <Shimmer className="h-4 w-1/2 !rounded-lg" />

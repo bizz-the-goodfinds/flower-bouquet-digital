@@ -245,14 +245,6 @@ body {
     transform: scale(0);
   }
 }
-@keyframes pp-load-breathe {
-  50% {
-    opacity: 0.55;
-  }
-}
-.pp-load-bud {
-  animation: pp-load-breathe 1.6s ease-in-out infinite;
-}
 .pp-shimmer {
   background: linear-gradient(100deg, var(--color-paper) 30%, #fbe3ea 50%, var(--color-paper) 70%) 0 0 / 250% 100%;
   animation: pp-shimmer 1.6s ease-in-out infinite;
