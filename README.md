@@ -90,6 +90,60 @@ Optional Cloudflare Turnstile, honeypot field, per-IP-hash rate limits (12 bouqu
 
 `.github/workflows/ci.yml` runs lint, type-check, build and Lighthouse CI (`lighthouserc.json`: accessibility and SEO must be 100; performance and best practices warn below 90/95).
 
-## Analytics events
+Last local audit (2026-09-30, production build):
 
-`preview_opened`, `wrap_selected`, `app_error`, `login`, `bouquet_edited`, `signup_completed`, `builder_opened`, `preset_selected`, `flower_added`, `shuffle_used`, `bouquet_created`, `share_clicked`, `image_downloaded`, `bouquet_viewed`, `bouquet_unwrapped`, `reaction_sent`, `sender_reply_sent`, `personal_link_created`, `send_back_clicked`. Note text and names carry `data-clarity-mask`. Analytics load on first interaction; in Europe/UK only after opt-in.
+| | Mobile | Desktop |
+|---|---|---|
+| Accessibility | 100 | 100 |
+| Best practices | 100 | 100 |
+| SEO | 100 | 100 |
+| Performance | 92–94 (`/create` 85) | 99–100 |
+
+- Mobile performance is capped by Lighthouse's simulated slow 4G, which counts the framework JavaScript. The real LCP is about 150ms.
+- `/garden` scores lower on SEO by design: it is noindex.
+- Vercel Analytics and Speed Insights render only when `VERCEL` is set, since their scripts 404 on other hosts.
+- Tap targets are at least 24px, and every page is checked for horizontal overflow at 360, 768 and 1024px.
+
+## Analytics
+
+Events go to Firebase Analytics (GA4) and Clarity through `track()` in `lib/analytics/track.ts`.
+
+**Loading and consent** (`components/analytics/consent.tsx`)
+- EU/UK: nothing loads until the visitor accepts.
+- Elsewhere: GA (first-party cookies) starts about 2s after page load, so visitors who never interact are still counted. Clarity (third-party cookies) waits for the first tap, scroll or key. A notice offers opt-out.
+- Crawlers and automated browsers are skipped.
+- Events fired before analytics load are queued (up to 50).
+- Note text and names carry `data-clarity-mask`.
+
+**Automatic events** (`components/analytics/listeners.tsx`, mounted in the root layout)
+
+| Event | When | Params |
+|---|---|---|
+| `cta_clicked` | any link to `/create` | `cta_text`, `placement` (hero, header, footer, mobile_menu, section id), `destination` |
+| `nav_clicked` | header, footer, mobile menu or breadcrumb link | `destination`, `link_text`, `placement` |
+| `select_content` | link to an occasion, flower or guide page | `content_type`, `item_id`, `placement` |
+| `web_vitals` | each Core Web Vital | `metric_name`, `metric_value` (CLS ×1000), `rating` |
+| `page_not_found` | 404 page | — |
+| any `data-track` | click on the element, or open for `<details>` | every `data-track-*` attribute, snake_cased |
+
+Every automatic event also carries `page_path`. To track a new element, add `data-track="event_name"` plus any `data-track-some-param="value"` instead of writing a handler. `<TrackOnMount name="…" />` fires one event when a server-rendered page mounts.
+
+**Product events**
+- **Builder:** `builder_opened`, `preset_selected`, `flower_added`, `flower_removed`, `wrap_selected`, `shuffle_used`, `undo_used`, `redo_used`, `builder_step`, `message_idea_used`, `preview_opened`, `form_error`, `captcha_failed`, `bouquet_created`, `bouquet_edited`, `bouquet_send_failed`, `make_another_clicked`
+  - `bouquet_created` carries every design choice: flower count, occasion, font, template, note mode, envelope colour, stickers, expiry, wrap, reveal, reply and message length.
+- **Sharing:** `share_clicked` (`channel`, `where`), `personal_link_created`, `personal_link_deleted`, `image_downloaded`, `export_failed`
+- **Recipient:**
+  - `bouquet_viewed`: `is_creator`, `personal_link`, `occasion`, `flower_count`, `source` (the `utm_source` or referrer host)
+  - `bouquet_locked_viewed`, `bouquet_unwrapped`, `note_opened`, `note_pinned`, `chat_toggled`, `reaction_sent`, `sender_reply_sent`, `send_back_clicked`, `report_opened`, `bouquet_reported`
+- **My bouquets:** `garden_tab`, `sent_preview_opened`, `bouquet_deleted`, `received_removed`, `bouquets_claimed`, `sync_prompt_opened`, `sync_prompt_dismissed`, `login_started`, `login`, `signup_completed`, `auth_failed`, `password_reset_requested`
+- **Consent and errors:** `consent_granted` (EU accept), `app_error`
+
+**Traffic attribution.** Links shared through a channel carry `utm_source=<channel>&utm_medium=share` (`withUtm()`):
+- Channels: whatsapp, telegram, x, sms, email, native_share, qr.
+- Opens from in-app browsers, which send no referrer, then show up as that channel in GA instead of "direct".
+- The copy-link URL stays clean.
+
+**GA4 setup** (one-time, in the GA admin)
+- Register the params you want in reports as custom dimensions: `placement`, `occasion`, `source`, `channel`, `flower_slug`, `metric_name`, `content_type`.
+- Mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events.
+- Keep Enhanced measurement → "Page changes based on browser history events" on, so client-side route changes count as page views.

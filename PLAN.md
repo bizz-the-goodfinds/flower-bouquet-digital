@@ -285,6 +285,7 @@ Realistic goal: Lighthouse 100/100/100/100 on landing and content pages, all Cor
 - `FAQPage` on FAQ and occasion pages.
 - `HowTo` on "How to send a digital bouquet".
 - `Article` + `BreadcrumbList` on guides and flower pages.
+- `CollectionPage` + `ItemList` on the occasions, flowers and guides hubs; `AboutPage` on About.
 
 ### AEO (answer engines: Google AI Overviews, featured snippets, voice)
 - Every content page opens with a 40–60 word direct answer, then detail.
@@ -311,25 +312,7 @@ Realistic goal: Lighthouse 100/100/100/100 on landing and content pages, all Cor
 - **Vercel Speed Insights + Analytics**: real-user Web Vitals.
 - Cookie / consent banner (Google Consent Mode v2) — required if you have EU/UK users; recommended for India DPDP too.
 
-Event taxonomy:
-
-| Event | Key params |
-|---|---|
-| `builder_opened` | source (landing, preset, send_back, direct) |
-| `preset_selected` | occasion |
-| `flower_added` | flower_slug, count |
-| `shuffle_used` | — |
-| `note_written` | length_bucket, font |
-| `bouquet_created` | flower_count, occasion, has_reveal_at |
-| `share_clicked` | channel (native, whatsapp, copy, qr) |
-| `image_downloaded` | format (square, story) |
-| `bouquet_viewed` | is_creator |
-| `bouquet_unwrapped` | time_to_unwrap_ms |
-| `reaction_sent` | emoji, has_reply, first |
-| `sender_reply_sent` | has_text |
-| `personal_link_created` | count |
-| `send_back_clicked` | — |
-| `signup_completed` | method |
+Event taxonomy: the full, current list lives in README.md → Analytics. It covers automatic events (`cta_clicked`, `nav_clicked`, `select_content`, `web_vitals`, `faq_opened`, `page_not_found`), the builder funnel, sharing, the recipient view and My bouquets. Share links carry `utm_source=<channel>&utm_medium=share` so opens from in-app browsers are attributed.
 
 North-star metric: **bouquets opened per week**. Viral coefficient = send-back bouquets created ÷ bouquets opened.
 
@@ -429,7 +412,7 @@ See the checklist in the chat reply / below.
 
 ---
 
-## 15. Build status (updated 2026-09-29)
+## 15. Build status (updated 2026-09-30)
 
 ### Done
 - Builder: 31 flowers/fillers + 4 greenery, 8 wrap shapes (cone, tissue wrap, sleeve, hat box, vase, layered, basket, mason jar) × 20 papers, 14 ribbons, 14 backgrounds; drag, pinch/rotate, keyboard, undo/redo, shuffle, surprise, occasion presets; picker order Wrap → Wrap colour → Flowers → Fillers & greens → Ribbon → Background; clickable steps; tooltips; fits one screen on every size.
@@ -458,7 +441,25 @@ See the checklist in the chat reply / below.
 - Catalog: 3 new wraps (layered, basket, mason jar) = 8; 8 new papers incl. stripes, hearts, gingham and starry prints = 20; 7 new ribbons = 14; 7 new backgrounds incl. 3 dark = 14.
 - Needs: run migration `0004_threads_chat_links.sql` before deploying (the recipient page reads the new columns).
 
+### v1.2 (2026-09-30): analytics, SEO and mobile polish
+- **Analytics.** GA starts about 2s after load, so visitors who bounce are counted. Clarity still waits for an interaction, and bots are skipped.
+  - Site-wide auto-tracking: CTA, nav and content clicks, FAQ opens, the mobile menu, Web Vitals and 404s. Any element can be tracked with `data-track` attributes.
+  - Funnel events across the builder, sharing, the recipient view and My bouquets.
+  - `bouquet_created` records every design choice.
+  - Share links are UTM-tagged per channel.
+- **SEO/AEO/GEO.**
+  - CollectionPage/ItemList schema on the hubs and AboutPage on About.
+  - Fixed the FAQ heading order, the logo's accessible name and a double period in llms.txt.
+  - Vercel scripts render only on Vercel.
+  - Lighthouse: accessibility, best practices and SEO are 100 on every public page. Performance is 99–100 on desktop and 92–94 on mobile.
+- **Mobile/tablet.**
+  - Footer links and breadcrumbs meet the 24px tap-target minimum, with a two-column footer on phones.
+  - Occasion flower descriptions no longer cut off mid-word.
+  - No overflow at 360, 768 or 1024px.
+- **Privacy policy** updated for GA load timing and UTM tags.
+
 ### Remaining (needs you or a decision)
+- GA4 admin: register the event params as custom dimensions, mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events, and keep history-based page views on (see README → Analytics).
 - Vercel: attach `flower-bouquet-digital.vercel.app` to the project, turn off Deployment Protection for Production, set env vars.
 - Supabase: add `/auth/callback` redirect URLs; add custom SMTP (e.g. Resend) so password-reset emails are branded and not rate-limited.
 - Rotate the database password and service-role key that were shared in chat.

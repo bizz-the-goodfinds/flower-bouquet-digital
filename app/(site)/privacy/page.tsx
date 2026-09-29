@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "September 29, 2026";
+const UPDATED = "September 30, 2026";
 
 export default function PrivacyPage() {
   const host = site.url.replace(/^https?:\/\//, "");
@@ -80,8 +80,9 @@ export default function PrivacyPage() {
           </li>
         </ul>
         <p>
-          In the EU, EEA and UK, analytics only load after you accept. Elsewhere they load after your first interaction and you can opt out from
-          the notice. To change your choice, clear this site&rsquo;s data in your browser and choose again.
+          In the EU, EEA and UK, analytics only load after you accept. Elsewhere, Google Analytics loads a moment after the page does and
+          Clarity loads after your first interaction, and you can opt out from the notice. Links shared from the app carry a tag naming the app
+          they were shared through (for example WhatsApp), so we can see which ones people use; it contains nothing about you. To change your choice, clear this site&rsquo;s data in your browser and choose again.
         </p>
 
         <h2>Who can see a bouquet</h2>
