@@ -93,4 +93,4 @@ export const createBouquetSchema = z.object({
 
 export type CreateBouquetInput = z.infer<typeof createBouquetSchema>;
 
-export const REACTIONS = ["💐", "🥹", "😭", "❤️‍🔥", "🫶", "😂", "🌸", "✨"] as const;
+export const REACTIONS = ["❤️", "😂", "😭", "😍", "🥹", "🫶", "🫰", "🫂"] as const;
