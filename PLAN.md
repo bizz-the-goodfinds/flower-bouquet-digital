@@ -1,6 +1,6 @@
 # Digital Flower Bouquet — Product & Build Plan
 
-Status: v1 built 2026-09-29 (see README.md). Defaults chosen for open inputs: brand "Petalpost", visual direction A, coded SVG flowers, no login (device-local "My bouquets"), honeypot + rate limits instead of Turnstile.
+Status: v1 built 2026-09-29 (see README.md). All MVP items in section 3 are implemented, including optional sign-in (email magic link; Google behind a flag), edit after sending, link expiry, card stickers, and Turnstile (active once keys are set). Defaults chosen for open inputs: brand "Petalpost", visual direction A, coded SVG flowers.
 
 ---
 

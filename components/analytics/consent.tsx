@@ -50,10 +50,16 @@ export function Consent() {
       });
   }, []);
 
+  useEffect(() => {
+    if (mode !== "notice") return;
+    const t = setTimeout(() => setMode("hidden"), 12000);
+    return () => clearTimeout(t);
+  }, [mode]);
+
   if (mode === "hidden") return null;
 
   return (
-    <div role="dialog" aria-label="Cookie preferences" className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-2xl border-[1.5px] border-ink bg-paper p-4 text-sm shadow-[3px_3px_0_0_var(--color-ink)] sm:left-auto sm:right-4">
+    <div role="dialog" aria-label="Cookie preferences" className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 mx-auto max-w-md [body:has([data-bottom-bar])_&]:bottom-24 lg:[body:has([data-bottom-bar])_&]:bottom-3 rounded-2xl border-[1.5px] border-ink bg-paper p-4 text-sm shadow-[3px_3px_0_0_var(--color-ink)] sm:left-auto sm:right-4">
       <p className="text-ink/85">
         {mode === "optin"
           ? "We'd like to use analytics cookies (Microsoft Clarity & Google Analytics) to see what works. Your bouquet notes are never recorded."

@@ -46,15 +46,15 @@ export function RecipientView({ bouquet }: { bouquet: PublicBouquet }) {
         ) : (
           <motion.div key="open" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto max-w-5xl px-4 pt-8 pb-20">
             {!reduce && <PetalRain dark={bg.dark} />}
-            <div className="grid items-center gap-6 lg:grid-cols-[1.1fr_1fr]">
-              <div className="mx-auto w-full max-w-[480px]">
+            <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-[1.1fr_1fr]">
+              <div className="mx-auto w-full max-w-[480px] min-w-0">
                 <BouquetSvg design={bouquet.design} bloom showBackground={false} label={`A bouquet for ${bouquet.to || "you"}`} className="h-auto w-full" />
               </div>
               <motion.div
                 initial={reduce ? { opacity: 0 } : { opacity: 0, y: 60, rotate: 4 }}
                 animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, rotate: -1.5 }}
                 transition={{ delay: reduce ? 0.2 : 1.6, type: "spring", stiffness: 120, damping: 16 }}
-                className="mx-auto w-full max-w-md"
+                className="mx-auto w-full max-w-md min-w-0 px-1"
               >
                 <NoteCard to={bouquet.to} from={bouquet.from} message={bouquet.message} style={bouquet.style} />
               </motion.div>
@@ -74,6 +74,7 @@ function Respond({ bouquet, dark }: { bouquet: PublicBouquet; dark: boolean }) {
   const [reply, setReply] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [reported, setReported] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const mine = typeof window !== "undefined" && isMine(bouquet.slug);
   const text = dark ? "text-cream" : "text-ink";
   const sendBack = `/create?replyTo=${bouquet.slug}${bouquet.from ? `&to=${encodeURIComponent(bouquet.from)}` : ""}`;
@@ -151,21 +152,39 @@ function Respond({ bouquet, dark }: { bouquet: PublicBouquet; dark: boolean }) {
 
       <p className={`mt-10 text-xs ${dark ? "text-cream/60" : "text-ink-soft"}`}>
         Made with <Link href="/" className="underline underline-offset-2">Petalpost</Link>, free digital bouquets.{" "}
-        {!mine && !reported && (
-          <button
-            className="ml-2 inline-flex items-center gap-1 underline underline-offset-2"
-            onClick={async () => {
-              const reason = window.prompt("What's wrong with this bouquet? (harassment, spam, etc.)");
-              if (!reason) return;
-              await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: bouquet.slug, reason }) });
-              setReported(true);
-            }}
-          >
+        {!mine && !reported && !reporting && (
+          <button className="ml-2 inline-flex min-h-11 items-center gap-1 underline underline-offset-2" onClick={() => setReporting(true)}>
             <Flag className="size-3" aria-hidden /> Report
           </button>
         )}
         {reported && <span className="ml-2">Thanks, we&rsquo;ll take a look.</span>}
       </p>
+      {reporting && !reported && (
+        <form
+          className="mx-auto mt-3 max-w-sm rounded-2xl border border-line bg-paper p-4 text-left text-sm text-ink"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const reason = new FormData(e.currentTarget).get("reason") as string;
+            await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: bouquet.slug, reason }) }).catch(() => {});
+            setReported(true);
+          }}
+        >
+          <fieldset>
+            <legend className="font-medium">What&rsquo;s wrong?</legend>
+            {["Harassment or bullying", "Spam or scam", "Hate or threats", "Something else"].map((r, i) => (
+              <label key={r} className="mt-2 flex min-h-9 items-center gap-2">
+                <input type="radio" name="reason" value={r} defaultChecked={i === 0} className="size-4 accent-ink" /> {r}
+              </label>
+            ))}
+          </fieldset>
+          <div className="mt-3 flex gap-2">
+            <button className="btn-primary !py-2 text-sm">Send report</button>
+            <button type="button" className="btn-ghost text-sm" onClick={() => setReporting(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

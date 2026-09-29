@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Short viewports: phones in landscape, small laptop windows */
+@custom-variant short (@media (max-height: 520px));
+
 @theme static {
   --color-cream: #fbf6ee;
   --color-paper: #fffdf8;
@@ -36,6 +39,11 @@
 
 :root {
   color-scheme: light;
+}
+
+html,
+body {
+  overflow-x: clip;
 }
 
 html {

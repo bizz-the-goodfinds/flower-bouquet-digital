@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { DEFAULTS } from "./catalog";
-import type { CardStyle } from "./card";
+import type { CardStyle, Expiry } from "./card";
 import { MAX_STEMS, arrange, spawnPosition, type Design, type Item } from "./composition";
 
 export type Step = "arrange" | "card" | "sent";
@@ -16,6 +16,9 @@ type State = {
   occasion: string | null;
   replyTo: string | null;
   revealAt: string; // datetime-local value, "" = open immediately
+  expiry: Expiry;
+  /** Set when editing an already-sent bouquet. */
+  editing: { slug: string; token: string | null } | null;
   selectedId: string | null;
   past: Design[];
   future: Design[];
@@ -35,14 +38,14 @@ type State = {
   removeItem: (id: string) => void;
   shuffle: () => void;
   setCard: (patch: Partial<CardDraft>) => void;
-  setMeta: (patch: Partial<Pick<State, "occasion" | "replyTo" | "revealAt">>) => void;
-  load: (patch: Partial<Pick<State, "design" | "card" | "occasion" | "replyTo" | "revealAt">>) => void;
+  setMeta: (patch: Partial<Pick<State, "occasion" | "replyTo" | "revealAt" | "expiry">>) => void;
+  load: (patch: Partial<Pick<State, "design" | "card" | "occasion" | "replyTo" | "revealAt" | "expiry" | "editing">>) => void;
   markSent: (sent: { slug: string; token: string }) => void;
   reset: () => void;
 };
 
 export const emptyDesign = (): Design => ({ items: [], ...DEFAULTS });
-const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "caveat" } });
+const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "caveat", stickers: [] } });
 
 const HISTORY = 60;
 
@@ -53,6 +56,8 @@ export const useBuilder = create<State>((set, get) => ({
   occasion: null,
   replyTo: null,
   revealAt: "",
+  expiry: "never",
+  editing: null,
   selectedId: null,
   past: [],
   future: [],
@@ -99,15 +104,28 @@ export const useBuilder = create<State>((set, get) => ({
   load: (patch) => set({ ...patch, past: [], future: [], selectedId: null }),
   markSent: (sent) => set({ sent, step: "sent" }),
   reset: () =>
-    set({ step: "arrange", design: emptyDesign(), card: emptyCard(), occasion: null, replyTo: null, revealAt: "", selectedId: null, past: [], future: [], sent: null }),
+    set({
+      step: "arrange",
+      design: emptyDesign(),
+      card: emptyCard(),
+      occasion: null,
+      replyTo: null,
+      revealAt: "",
+      expiry: "never",
+      editing: null,
+      selectedId: null,
+      past: [],
+      future: [],
+      sent: null,
+    }),
 }));
 
 // ---------- Draft persistence ----------
 const DRAFT_KEY = "pp-draft-v1";
 
 export function saveDraft() {
-  const { design, card, occasion, replyTo, step } = useBuilder.getState();
-  if (step === "sent") return;
+  const { design, card, occasion, replyTo, step, editing } = useBuilder.getState();
+  if (step === "sent" || editing) return;
   try {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ design, card, occasion, replyTo, at: Date.now() }));
   } catch {}
@@ -119,6 +137,7 @@ export function readDraft(): Pick<State, "design" | "card" | "occasion" | "reply
     if (!raw) return null;
     const d = JSON.parse(raw);
     if (!d?.design?.items || Date.now() - d.at > 7 * 24 * 3600 * 1000) return null;
+    d.card.style.stickers ??= [];
     return d;
   } catch {
     return null;

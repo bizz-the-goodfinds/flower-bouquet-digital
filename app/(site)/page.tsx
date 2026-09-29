@@ -113,12 +113,12 @@ export default function Home() {
             <li key={o.slug}>
               <Link
                 href={`/occasions/${o.slug}`}
-                className="group flex h-full items-center gap-3 rounded-2xl border border-line bg-paper px-4 py-4 transition hover:-translate-y-0.5 hover:border-ink hover:shadow-[3px_3px_0_0_var(--color-ink)]"
+                className="group flex h-full min-h-14 items-center gap-2.5 rounded-2xl border border-line bg-paper px-3 py-3 transition sm:gap-3 sm:px-4 sm:py-4 hover:-translate-y-0.5 hover:border-ink hover:shadow-[3px_3px_0_0_var(--color-ink)]"
               >
                 <span className="text-2xl" aria-hidden>
                   {o.emoji}
                 </span>
-                <span className="font-medium">{o.name}</span>
+                <span className="min-w-0 text-[15px] leading-tight font-medium [overflow-wrap:anywhere] sm:text-base">{o.name}</span>
               </Link>
             </li>
           ))}

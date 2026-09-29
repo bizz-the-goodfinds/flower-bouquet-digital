@@ -14,7 +14,7 @@ function IconBtn({ label, onClick, disabled, children }: { label: string; onClic
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className="grid size-10 shrink-0 place-items-center rounded-full text-ink transition hover:bg-ink/5 active:scale-90 disabled:opacity-30"
+      className="grid size-11 shrink-0 place-items-center rounded-full text-ink transition hover:bg-ink/5 active:scale-90 disabled:opacity-30"
     >
       {children}
     </button>
@@ -47,7 +47,7 @@ export function TopBar({ onSurprise }: { onSurprise: () => void }) {
         </IconBtn>
       </div>
       <div className="flex items-center gap-2">
-        <button type="button" onClick={onSurprise} className="btn-ghost !px-3 text-sm" aria-label="Surprise me">
+        <button type="button" onClick={onSurprise} className="btn-ghost !px-3 text-sm whitespace-nowrap" aria-label="Surprise me">
           <Wand2 className="size-4" aria-hidden /> <span className="hidden sm:inline">Surprise me</span>
         </button>
         <button

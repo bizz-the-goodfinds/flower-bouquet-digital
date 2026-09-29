@@ -20,12 +20,24 @@ export const CARD_FONTS = {
   mono: { name: "Typed", css: "var(--font-mono)", scale: 0.9 },
 } as const;
 
+export const STICKERS = ["💖", "🌸", "✨", "🦋", "🍓", "🎀", "🌈", "⭐", "🧸", "🍰", "🫶", "🔥"] as const;
+export const MAX_STICKERS = 3;
+
+export const EXPIRY_OPTIONS = {
+  never: { name: "Forever", days: null },
+  "30d": { name: "30 days", days: 30 },
+  "7d": { name: "7 days", days: 7 },
+  "24h": { name: "24 hours", days: 1 },
+} as const;
+export type Expiry = keyof typeof EXPIRY_OPTIONS;
+
 export type CardTemplate = keyof typeof CARD_TEMPLATES;
 export type CardFont = keyof typeof CARD_FONTS;
 
 export const cardStyleSchema = z.object({
   template: z.enum(Object.keys(CARD_TEMPLATES) as [CardTemplate, ...CardTemplate[]]),
   font: z.enum(Object.keys(CARD_FONTS) as [CardFont, ...CardFont[]]),
+  stickers: z.array(z.enum(STICKERS)).max(MAX_STICKERS).default([]),
 });
 export type CardStyle = z.infer<typeof cardStyleSchema>;
 
@@ -51,6 +63,8 @@ export const createBouquetSchema = z.object({
     .refine((s) => !s || OCCASION_BY_SLUG.has(s)),
   revealAt: z.string().datetime({ offset: true }).optional().nullable(),
   replyTo: z.string().regex(/^[A-Za-z0-9_-]{6,16}$/).optional().nullable(),
+  expiry: z.enum(Object.keys(EXPIRY_OPTIONS) as [Expiry, ...Expiry[]]).default("never"),
+  turnstileToken: z.string().max(4096).optional().nullable(),
   /** Honeypot: real users never fill this */
   website: z.string().max(0).optional(),
 });

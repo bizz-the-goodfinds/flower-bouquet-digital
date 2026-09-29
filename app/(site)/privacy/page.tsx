@@ -32,7 +32,10 @@ export default function PrivacyPage() {
             address.
           </li>
         </ul>
-        <p>We don&rsquo;t require an account, and we don&rsquo;t ask for your email or phone number.</p>
+        <p>
+          Accounts are optional. If you choose to sign in, we store your email address (or your Google account&rsquo;s email) so your bouquets can
+          sync across devices. We never email you anything except the sign-in link you ask for.
+        </p>
 
         <h2>On your device</h2>
         <p>

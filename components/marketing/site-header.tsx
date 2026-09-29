@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
+import { MobileMenu } from "./mobile-menu";
 
 export function SiteHeader() {
   return (
@@ -9,18 +10,19 @@ export function SiteHeader() {
           <Logo />
         </Link>
         <nav aria-label="Main" className="flex items-center gap-1 text-[15px]">
-          <Link href="/flowers" className="btn-ghost hidden sm:inline-flex">
+          <Link href="/flowers" className="btn-ghost hidden md:inline-flex">
             Meanings
           </Link>
-          <Link href="/occasions" className="btn-ghost hidden sm:inline-flex">
+          <Link href="/occasions" className="btn-ghost hidden md:inline-flex">
             Occasions
           </Link>
           <Link href="/garden" className="btn-ghost hidden md:inline-flex">
             My bouquets
           </Link>
-          <Link href="/create" className="btn-primary ml-1 !px-4 !py-2">
+          <Link href="/create" className="btn-primary ml-1 !px-4 !py-2 max-[359px]:hidden">
             Make one
           </Link>
+          <MobileMenu />
         </nav>
       </div>
     </header>

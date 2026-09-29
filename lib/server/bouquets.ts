@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { Design, Item } from "@/lib/bouquet/composition";
-import type { CardStyle } from "@/lib/bouquet/card";
+import { EXPIRY_OPTIONS, type CardStyle, type CreateBouquetInput } from "@/lib/bouquet/card";
 
 export type PublicBouquet = {
   slug: string;
@@ -23,12 +23,12 @@ export type BouquetState =
 
 const SLUG_RE = /^[A-Za-z0-9_-]{6,16}$/;
 
-type Row = {
+export type Row = {
   slug: string;
   composition: { items: Item[] };
   wrapper: string;
   background: string;
-  card_style: { template?: string; font?: string; ribbon?: string };
+  card_style: { template?: string; font?: string; ribbon?: string; stickers?: string[] };
   recipient_name: string | null;
   sender_name: string | null;
   message: string | null;
@@ -74,6 +74,7 @@ export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
       style: {
         template: (data.card_style.template ?? "paper") as CardStyle["template"],
         font: (data.card_style.font ?? "caveat") as CardStyle["font"],
+        stickers: (data.card_style.stickers ?? []) as CardStyle["stickers"],
       },
       occasion: data.occasion,
       revealAt: data.reveal_at,
@@ -81,3 +82,46 @@ export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
     },
   };
 });
+
+/** Maps validated input to the columns shared by insert and update. */
+export function bouquetColumns(input: CreateBouquetInput) {
+  const { design, card, occasion, revealAt, expiry } = input;
+  const days = EXPIRY_OPTIONS[expiry].days;
+  return {
+    composition: { items: design.items },
+    wrapper: design.wrapper,
+    background: design.background,
+    card_style: { ...card.style, ribbon: design.ribbon },
+    recipient_name: card.to || null,
+    sender_name: card.from || null,
+    message: card.message || null,
+    occasion: occasion || null,
+    reveal_at: revealAt || null,
+    expires_at: days ? new Date(Date.now() + days * 24 * 3600 * 1000).toISOString() : null,
+  };
+}
+
+/** Editable source of a bouquet, for its creator. */
+export function toSource(row: Row & { id?: string }) {
+  return {
+    slug: row.slug,
+    design: { items: row.composition.items, wrapper: row.wrapper, background: row.background, ribbon: row.card_style.ribbon ?? "cherry" },
+    card: {
+      to: row.recipient_name ?? "",
+      from: row.sender_name ?? "",
+      message: row.message ?? "",
+      style: {
+        template: row.card_style.template ?? "paper",
+        font: row.card_style.font ?? "caveat",
+        stickers: row.card_style.stickers ?? [],
+      },
+    },
+    occasion: row.occasion,
+    revealAt: row.reveal_at,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+  };
+}
+
+export const SOURCE_COLUMNS =
+  "id, slug, edit_token_hash, owner_id, composition, wrapper, background, card_style, recipient_name, sender_name, message, occasion, reveal_at, expires_at, deleted_at, is_flagged, created_at, view_count";

@@ -13,7 +13,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function CreatePage({ searchParams }: PageProps<"/create">) {
   const sp = await searchParams;
-  const params = { occasion: one(sp.occasion), flowers: one(sp.flowers), replyTo: one(sp.replyTo), to: one(sp.to) };
+  const params = { occasion: one(sp.occasion), flowers: one(sp.flowers), replyTo: one(sp.replyTo), to: one(sp.to), edit: one(sp.edit) };
   return (
     <div className={cardFontVars}>
       <h1 className="sr-only">Digital bouquet maker</h1>

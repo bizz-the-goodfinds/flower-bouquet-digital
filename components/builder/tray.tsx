@@ -29,14 +29,14 @@ export function Tray() {
 
   return (
     <div className="rounded-[1.5rem] border border-line bg-paper">
-      <div role="tablist" aria-label="Bouquet parts" className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line p-2">
+      <div role="tablist" aria-label="Bouquet parts" className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line p-2 lg:flex-wrap">
         {TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-medium transition ${tab === t.id ? "bg-ink text-cream" : "text-ink-soft hover:bg-ink/5"}`}
+            className={`min-h-11 shrink-0 rounded-full px-3.5 text-sm font-medium transition ${tab === t.id ? "bg-ink text-cream" : "text-ink-soft hover:bg-ink/5"}`}
           >
             {t.label}
           </button>
@@ -52,7 +52,7 @@ export function Tray() {
                 {count}/{MAX_STEMS}
               </span>
             </p>
-            <ul className="grid max-h-[272px] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:max-h-[420px] lg:grid-cols-3 xl:grid-cols-4">
+            <ul className="grid grid-cols-3 gap-1.5 min-[420px]:grid-cols-4 sm:grid-cols-5 lg:max-h-[calc(100dvh-16rem)] lg:grid-cols-3 lg:overflow-y-auto lg:pr-1 xl:grid-cols-4">
               {stems.map((s) => (
                 <li key={s.slug}>
                   <button
