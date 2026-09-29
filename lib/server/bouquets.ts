@@ -1,8 +1,9 @@
 import "server-only";
 import { cache } from "react";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Design, Item } from "@/lib/bouquet/composition";
-import { EXPIRY_OPTIONS, type CardStyle, type CreateBouquetInput } from "@/lib/bouquet/card";
+import { normalizeDesign, type Design, type Item } from "@/lib/bouquet/composition";
+import { normalizeEnvelope, type EnvelopeLook } from "@/lib/bouquet/envelope";
+import { EXPIRY_OPTIONS, normalizeCardFont, normalizeStickers, type CardStyle, type CreateBouquetInput } from "@/lib/bouquet/card";
 
 export type PublicBouquet = {
   slug: string;
@@ -18,7 +19,7 @@ export type PublicBouquet = {
 
 export type BouquetState =
   | { status: "ok"; bouquet: PublicBouquet }
-  | { status: "locked"; to: string; from: string; revealAt: string; design: Design }
+  | { status: "locked"; to: string; from: string; revealAt: string; design: Design; envelope: EnvelopeLook }
   | { status: "missing" };
 
 const SLUG_RE = /^[A-Za-z0-9_-]{6,16}$/;
@@ -28,7 +29,7 @@ export type Row = {
   composition: { items: Item[] };
   wrapper: string;
   background: string;
-  card_style: { template?: string; font?: string; ribbon?: string; stickers?: string[] };
+  card_style: { template?: string; font?: string; ribbon?: string; paper?: string; stickers?: string[]; envelope?: unknown };
   recipient_name: string | null;
   sender_name: string | null;
   message: string | null;
@@ -51,17 +52,18 @@ export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
   if (!data || data.deleted_at || data.is_flagged) return { status: "missing" };
   if (data.expires_at && new Date(data.expires_at) < new Date()) return { status: "missing" };
 
-  const design: Design = {
+  const design: Design = normalizeDesign({
     items: data.composition.items,
     wrapper: data.wrapper,
+    paper: data.card_style.paper,
     background: data.background,
     ribbon: data.card_style.ribbon ?? "cherry",
-  };
+  });
   const to = data.recipient_name ?? "";
   const from = data.sender_name ?? "";
 
   if (data.reveal_at && new Date(data.reveal_at) > new Date()) {
-    return { status: "locked", to, from, revealAt: data.reveal_at, design };
+    return { status: "locked", to, from, revealAt: data.reveal_at, design, envelope: normalizeEnvelope(data.card_style.envelope) };
   }
   return {
     status: "ok",
@@ -73,8 +75,9 @@ export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
       message: data.message ?? "",
       style: {
         template: (data.card_style.template ?? "paper") as CardStyle["template"],
-        font: (data.card_style.font ?? "caveat") as CardStyle["font"],
-        stickers: (data.card_style.stickers ?? []) as CardStyle["stickers"],
+        font: normalizeCardFont(data.card_style.font),
+        stickers: normalizeStickers(data.card_style.stickers) as CardStyle["stickers"],
+        envelope: normalizeEnvelope(data.card_style.envelope),
       },
       occasion: data.occasion,
       revealAt: data.reveal_at,
@@ -91,7 +94,7 @@ export function bouquetColumns(input: CreateBouquetInput) {
     composition: { items: design.items },
     wrapper: design.wrapper,
     background: design.background,
-    card_style: { ...card.style, ribbon: design.ribbon },
+    card_style: { ...card.style, ribbon: design.ribbon, paper: design.paper },
     recipient_name: card.to || null,
     sender_name: card.from || null,
     message: card.message || null,
@@ -105,15 +108,22 @@ export function bouquetColumns(input: CreateBouquetInput) {
 export function toSource(row: Row & { id?: string }) {
   return {
     slug: row.slug,
-    design: { items: row.composition.items, wrapper: row.wrapper, background: row.background, ribbon: row.card_style.ribbon ?? "cherry" },
+    design: normalizeDesign({
+      items: row.composition.items,
+      wrapper: row.wrapper,
+      paper: row.card_style.paper,
+      background: row.background,
+      ribbon: row.card_style.ribbon ?? "cherry",
+    }),
     card: {
       to: row.recipient_name ?? "",
       from: row.sender_name ?? "",
       message: row.message ?? "",
       style: {
         template: row.card_style.template ?? "paper",
-        font: row.card_style.font ?? "caveat",
-        stickers: row.card_style.stickers ?? [],
+        font: normalizeCardFont(row.card_style.font),
+        stickers: normalizeStickers(row.card_style.stickers),
+        envelope: normalizeEnvelope(row.card_style.envelope),
       },
     },
     occasion: row.occasion,

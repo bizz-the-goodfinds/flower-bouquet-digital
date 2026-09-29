@@ -1,4 +1,4 @@
-import { CARD_FONTS, CARD_TEMPLATES, type CardStyle } from "@/lib/bouquet/card";
+import { CARD_FONTS, CARD_TEMPLATES, normalizeCardFont, type CardStyle } from "@/lib/bouquet/card";
 
 const STICKER_SPOTS = ["-top-4 -right-3 rotate-12", "-bottom-4 -left-3 -rotate-12", "top-1/2 -right-4 rotate-6"];
 
@@ -18,7 +18,7 @@ export function NoteCard({
   placeholder?: boolean;
 }) {
   const t = CARD_TEMPLATES[style.template] ?? CARD_TEMPLATES.paper;
-  const f = CARD_FONTS[style.font] ?? CARD_FONTS.caveat;
+  const f = CARD_FONTS[normalizeCardFont(style.font)];
   const show = (v: string, ph: string) => v || (placeholder ? ph : "");
   return (
     <div
@@ -37,7 +37,7 @@ export function NoteCard({
         </span>
       ))}
       {show(to, "Their name") && (
-        <p className="font-mono text-[11px] tracking-[0.14em] uppercase opacity-70 [overflow-wrap:anywhere]">for {show(to, "Their name")}</p>
+        <p className="font-mono text-xs tracking-[0.12em] uppercase opacity-70 [overflow-wrap:anywhere]">for {show(to, "Their name")}</p>
       )}
       <p
         className="mt-3 whitespace-pre-wrap [overflow-wrap:anywhere]"

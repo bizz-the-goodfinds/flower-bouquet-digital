@@ -9,8 +9,11 @@ export function StaticBouquet({ design, className, label }: { design: Design; cl
   return <div className={className} dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
-export function presetDesign(p: { stems: string[]; wrapper: string; ribbon: string; background: string }, seed = 42): Design {
-  return { items: arrange(p.stems, seed), wrapper: p.wrapper, ribbon: p.ribbon, background: p.background };
+export type Preset = { stems: string[]; wrap?: string; paper: string; ribbon: string; background: string };
+
+export function presetDesign(p: Preset, seed = 42): Design {
+  const wrapper = p.wrap ?? "cone";
+  return { items: arrange(p.stems, seed, wrapper), wrapper, paper: p.paper, ribbon: p.ribbon, background: p.background };
 }
 
 export function StemThumb({ slug, className = "size-12" }: { slug: string; className?: string }) {

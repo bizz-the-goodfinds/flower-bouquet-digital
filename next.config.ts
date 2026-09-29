@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/opengraph-image": ["./assets/**"],
     "/b/[slug]/opengraph-image": ["./assets/**"],
-    "/apple-icon": ["./app/icon.svg"],
   },
   async headers() {
     return [

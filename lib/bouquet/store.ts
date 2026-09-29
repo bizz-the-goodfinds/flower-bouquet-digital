@@ -2,8 +2,9 @@
 
 import { create } from "zustand";
 import { DEFAULTS } from "./catalog";
-import type { CardStyle, Expiry } from "./card";
-import { MAX_STEMS, arrange, spawnPosition, type Design, type Item } from "./composition";
+import { normalizeCardFont, normalizeStickers, type CardStyle, type Expiry } from "./card";
+import { DEFAULT_ENVELOPE, normalizeEnvelope } from "./envelope";
+import { MAX_STEMS, arrange, normalizeDesign, spawnPosition, type Design, type Item } from "./composition";
 
 export type Step = "arrange" | "card" | "sent";
 
@@ -45,7 +46,7 @@ type State = {
 };
 
 export const emptyDesign = (): Design => ({ items: [], ...DEFAULTS });
-const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "caveat", stickers: [] } });
+const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "playfair", stickers: [], envelope: { ...DEFAULT_ENVELOPE } } });
 
 const HISTORY = 60;
 
@@ -84,7 +85,7 @@ export const useBuilder = create<State>((set, get) => ({
   addStem: (slug) => {
     const { design } = get();
     if (design.items.length >= MAX_STEMS) return;
-    const item = spawnPosition(design.items, slug);
+    const item = spawnPosition(design.items, slug, Math.random, design.wrapper);
     get().commit((d) => ({ ...d, items: [...d.items, item] }));
     set({ selectedId: item.id });
   },
@@ -96,7 +97,7 @@ export const useBuilder = create<State>((set, get) => ({
   shuffle: () => {
     const { design } = get();
     if (!design.items.length) return;
-    get().commit((d) => ({ ...d, items: arrange(d.items.map((i) => i.f)) }));
+    get().commit((d) => ({ ...d, items: arrange(d.items.map((i) => i.f), Date.now(), d.wrapper) }));
     set({ selectedId: null });
   },
   setCard: (patch) => set((s) => ({ card: { ...s.card, ...patch } })),
@@ -137,7 +138,10 @@ export function readDraft(): Pick<State, "design" | "card" | "occasion" | "reply
     if (!raw) return null;
     const d = JSON.parse(raw);
     if (!d?.design?.items || Date.now() - d.at > 7 * 24 * 3600 * 1000) return null;
-    d.card.style.stickers ??= [];
+    d.card.style.stickers = normalizeStickers(d.card.style.stickers);
+    d.card.style.font = normalizeCardFont(d.card.style.font);
+    d.card.style.envelope = normalizeEnvelope(d.card.style.envelope);
+    d.design = normalizeDesign(d.design);
     return d;
   } catch {
     return null;

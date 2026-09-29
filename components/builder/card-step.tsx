@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, CalendarClock, Hourglass, Loader2, Save, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, CalendarClock, Eye, Hourglass, Loader2, Pencil, RotateCcw, Save, Send } from "lucide-react";
+import { EnvelopeArt } from "@/components/reveal/envelope";
+import { RecipientView } from "@/components/reveal/recipient-view";
+import { Tooltip } from "@/components/ui/tooltip";
+import { ENVELOPE_COLORS, LINERS, SEALS, linerSwatchSvg, sealSvg, type EnvelopeColor, type Liner, type Seal } from "@/lib/bouquet/envelope";
+import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { NoteCard } from "@/components/bouquet/note-card";
+import { BACKGROUNDS } from "@/lib/bouquet/catalog";
 import { CARD_FONTS, CARD_TEMPLATES, EXPIRY_OPTIONS, MAX_STICKERS, STICKERS, type CardFont, type CardTemplate, type Expiry } from "@/lib/bouquet/card";
 import { clearDraft, useBuilder } from "@/lib/bouquet/store";
 import { OCCASION_BY_SLUG } from "@/lib/content/occasions";
@@ -18,6 +24,8 @@ export function CardStep() {
   const revealAt = useBuilder((s) => s.revealAt);
   const expiry = useBuilder((s) => s.expiry);
   const editing = useBuilder((s) => s.editing);
+  const design = useBuilder((s) => s.design);
+  const bg = BACKGROUNDS[design.background] ?? BACKGROUNDS.cream;
   const { setCard, setMeta, setStep } = useBuilder.getState();
   const [captcha, setCaptcha] = useState<string | null>(null);
   const needsCaptcha = Boolean(TURNSTILE_SITE_KEY) && !editing && !captcha;
@@ -26,7 +34,10 @@ export function CardStep() {
   const [sending, setSending] = useState(false);
   const ideas = occasion ? OCCASION_BY_SLUG.get(occasion)?.messages ?? [] : [];
 
-  const send = async (e: React.FormEvent<HTMLFormElement>) => {
+  const [confirm, setConfirm] = useState<{ reveal: string | null; honeypot: string } | null>(null);
+
+  /** Step 1: validate, then show the full preview for confirmation. */
+  const review = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const st = useBuilder.getState();
@@ -40,6 +51,16 @@ export function CardStep() {
       }
       reveal = d.toISOString();
     }
+    setConfirm({ reveal, honeypot });
+    track("preview_opened", { editing: Boolean(st.editing) });
+  };
+
+  /** Step 2: the person confirmed the preview. */
+  const send = async () => {
+    if (!confirm) return;
+    const { reveal, honeypot } = confirm;
+    const st = useBuilder.getState();
+    setError(null);
     setSending(true);
     try {
       const payload = JSON.stringify({
@@ -83,13 +104,14 @@ export function CardStep() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError((err as Error).message);
+      setConfirm(null);
     } finally {
       setSending(false);
     }
   };
 
   return (
-    <form onSubmit={send} className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+    <form onSubmit={review} className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div className="order-2 min-w-0 space-y-5 lg:order-1">
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
@@ -196,6 +218,70 @@ export function CardStep() {
         </fieldset>
 
         <fieldset>
+          <legend className="label mb-2">Envelope</legend>
+          <div className="flex gap-4 rounded-2xl border border-line bg-paper p-3">
+            <div className="w-24 shrink-0 self-center sm:w-28">
+              <EnvelopeArt look={card.style.envelope} initial={card.from} />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2.5">
+              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Envelope colour">
+                {(Object.keys(ENVELOPE_COLORS) as EnvelopeColor[]).map((k) => (
+                  <Tooltip key={k} label={ENVELOPE_COLORS[k].name}>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={card.style.envelope.color === k}
+                      aria-label={`${ENVELOPE_COLORS[k].name} envelope`}
+                      onClick={() => setCard({ style: { ...card.style, envelope: { ...card.style.envelope, color: k } } })}
+                      className={`size-8 rounded-full border-2 transition ${card.style.envelope.color === k ? "scale-110 border-ink shadow-[2px_2px_0_0_var(--color-ink)]" : "border-line"}`}
+                      style={{ background: `linear-gradient(135deg, ${ENVELOPE_COLORS[k].flap} 50%, ${ENVELOPE_COLORS[k].body} 50%)` }}
+                    />
+                  </Tooltip>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Seal">
+                {(Object.keys(SEALS) as Seal[]).map((k) => {
+                  const on = card.style.envelope.seal === k;
+                  return (
+                    <Tooltip key={k} label={`${SEALS[k]} seal`}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        aria-label={`${SEALS[k]} seal`}
+                        onClick={() => setCard({ style: { ...card.style, envelope: { ...card.style.envelope, seal: k } } })}
+                        className={`grid size-10 place-items-center rounded-full transition ${on ? "scale-110 ring-2 ring-ink ring-offset-2 ring-offset-paper" : "opacity-80 hover:opacity-100"}`}
+                      >
+                        <svg viewBox="-34 -34 68 68" className="size-10" aria-hidden dangerouslySetInnerHTML={{ __html: sealSvg({ ...card.style.envelope, seal: k }, card.from) }} />
+                      </button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Liner">
+                {(Object.keys(LINERS) as Liner[]).map((k) => {
+                  const on = card.style.envelope.liner === k;
+                  return (
+                    <Tooltip key={k} label={`${LINERS[k]} liner`}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        aria-label={`${LINERS[k]} liner`}
+                        onClick={() => setCard({ style: { ...card.style, envelope: { ...card.style.envelope, liner: k } } })}
+                        className={`size-10 overflow-hidden rounded-xl border-[1.5px] transition ${on ? "scale-110 border-ink shadow-[2px_2px_0_0_var(--color-ink)]" : "border-line"}`}
+                      >
+                        <svg viewBox="0 0 60 60" className="size-full" aria-hidden dangerouslySetInnerHTML={{ __html: linerSwatchSvg({ ...card.style.envelope, liner: k }) }} />
+                      </button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
           <legend className="label mb-2 flex items-center gap-1.5">
             <Hourglass className="size-3.5" aria-hidden /> Link lasts
           </legend>
@@ -263,8 +349,8 @@ export function CardStep() {
             <ArrowLeft className="size-4" aria-hidden /> Flowers
           </button>
           <button type="submit" className="btn-primary text-base" disabled={sending || needsCaptcha}>
-            {sending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : editing ? <Save className="size-4" aria-hidden /> : <Send className="size-4" aria-hidden />}
-            {sending ? "Wrapping…" : needsCaptcha ? "Checking…" : editing ? "Save changes" : "Send bouquet"}
+            <Eye className="size-4" aria-hidden />
+            {needsCaptcha ? "Checking…" : "Preview & send"}
           </button>
         </div>
         <p className="text-xs text-ink-soft">
@@ -272,12 +358,107 @@ export function CardStep() {
         </p>
       </div>
 
-      <div className="order-1 lg:order-2">
+      <div className="order-1 min-w-0 lg:order-2">
         <div className="lg:sticky lg:top-24">
-          <p className="label mb-3 text-center">preview</p>
-          <NoteCard to={card.to} from={card.from} message={card.message} style={card.style} placeholder className="mx-auto max-w-sm -rotate-1" />
+          <p className="label mb-2 text-center">live preview</p>
+          <div className="mx-auto max-w-sm rounded-[1.75rem] p-3 pb-5 ring-1 ring-line" style={{ background: bg.fill }}>
+            <BouquetSvg design={design} showBackground={false} label="Your bouquet" className="mx-auto h-auto w-[62%] min-[420px]:w-[70%] lg:w-[78%]" />
+            <NoteCard to={card.to} from={card.from} message={card.message} style={card.style} placeholder className="relative mx-2 -mt-6 -rotate-1 sm:-mt-10" />
+          </div>
+          <button type="submit" className="btn-primary mx-auto mt-5 hidden w-full max-w-sm text-base lg:flex" disabled={needsCaptcha}>
+            <Eye className="size-4" aria-hidden /> {needsCaptcha ? "Checking…" : "Preview & send"}
+          </button>
         </div>
       </div>
+
+      {confirm && (
+        <ConfirmSend
+          sending={sending}
+          editing={Boolean(editing)}
+          reveal={confirm.reveal}
+          onCancel={() => setConfirm(null)}
+          onConfirm={send}
+        />
+      )}
     </form>
+  );
+}
+
+function ConfirmSend({
+  sending,
+  editing,
+  reveal,
+  onCancel,
+  onConfirm,
+}: {
+  sending: boolean;
+  editing: boolean;
+  reveal: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [run, setRun] = useState(0);
+  const design = useBuilder((s) => s.design);
+  const card = useBuilder((s) => s.card);
+  const expiry = useBuilder((s) => s.expiry);
+  const occasion = useBuilder((s) => s.occasion);
+
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+    return () => d?.close();
+  }, []);
+
+  const bouquet = {
+    slug: "preview",
+    design,
+    to: card.to,
+    from: card.from,
+    message: card.message,
+    style: card.style,
+    occasion,
+    revealAt: reveal,
+    createdAt: new Date().toISOString(),
+  };
+
+  const actions = (
+    <div className="flex items-center gap-1.5">
+      <Tooltip label="Back to editing" side="bottom">
+        <button type="button" className="btn-ghost min-h-11 border border-line bg-paper !px-3" onClick={onCancel} disabled={sending} aria-label="Keep editing">
+          <Pencil className="size-4" aria-hidden /> <span className="hidden sm:inline">Keep editing</span>
+        </button>
+      </Tooltip>
+      <Tooltip label="Play the opening again" side="bottom">
+        <button type="button" className="grid size-11 place-items-center rounded-full border border-line bg-paper" onClick={() => setRun((r) => r + 1)} aria-label="Replay">
+          <RotateCcw className="size-4" aria-hidden />
+        </button>
+      </Tooltip>
+      <button type="button" className="btn-primary min-h-11 !px-4 text-sm whitespace-nowrap" onClick={onConfirm} disabled={sending} autoFocus>
+        {sending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : editing ? <Save className="size-4" aria-hidden /> : <Send className="size-4" aria-hidden />}
+        {sending ? "Wrapping…" : editing ? "Save" : "Send 💐"}
+      </button>
+    </div>
+  );
+
+  return (
+    <dialog
+      ref={ref}
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!sending) onCancel();
+      }}
+      aria-label="Preview before sending"
+      className="m-0 h-dvh max-h-none w-screen max-w-none overflow-y-auto bg-cream p-0 text-ink backdrop:bg-ink/60"
+    >
+      <p className="sticky top-0 z-40 h-7 truncate bg-ink px-4 text-center text-xs leading-7 text-cream">
+        <span className="font-medium">Preview</span> · exactly what {card.to || "they"}&rsquo;ll see
+        <span className="hidden sm:inline">
+          {" "}· Opens {reveal ? new Date(reveal).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "right away"} · Link lasts{" "}
+          {EXPIRY_OPTIONS[expiry].name.toLowerCase()}
+        </span>
+      </p>
+      <RecipientView key={run} bouquet={bouquet} preview previewActions={actions} />
+    </dialog>
   );
 }

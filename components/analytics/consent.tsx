@@ -59,11 +59,11 @@ export function Consent() {
   if (mode === "hidden") return null;
 
   return (
-    <div role="dialog" aria-label="Cookie preferences" className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 mx-auto max-w-md [body:has([data-bottom-bar])_&]:bottom-24 lg:[body:has([data-bottom-bar])_&]:bottom-3 rounded-2xl border-[1.5px] border-ink bg-paper p-4 text-sm shadow-[3px_3px_0_0_var(--color-ink)] sm:left-auto sm:right-4">
+    <div role="dialog" aria-label="Cookie preferences" className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 mx-auto max-w-md [body:has([data-bottom-bar])_&]:top-20 [body:has([data-bottom-bar])_&]:bottom-auto lg:[body:has([data-bottom-bar])_&]:top-auto lg:[body:has([data-bottom-bar])_&]:bottom-3 rounded-2xl border-[1.5px] border-ink bg-paper p-4 text-sm shadow-[3px_3px_0_0_var(--color-ink)] sm:left-auto sm:right-4">
       <p className="text-ink/85">
         {mode === "optin"
           ? "We'd like to use analytics cookies (Microsoft Clarity & Google Analytics) to see what works. Your bouquet notes are never recorded."
-          : "We use privacy-friendly analytics to improve Petalpost. Your notes are never recorded."}{" "}
+          : "We use privacy-friendly analytics to improve Flower Bouquet Digital. Your notes are never recorded."}{" "}
         <Link href="/privacy" className="underline underline-offset-2">
           Privacy
         </Link>

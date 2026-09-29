@@ -46,7 +46,7 @@ export function Countdown({ revealAt }: { revealAt: string }) {
         ).map(([k, label]) => (
           <div key={k} className="w-16 rounded-xl border-[1.5px] border-ink bg-paper py-2 shadow-[2px_2px_0_0_var(--color-ink)]">
             <div className="text-2xl tabular-nums">{now === null ? "--" : String(p[k]).padStart(2, "0")}</div>
-            <div className="text-[10px] tracking-widest text-ink-soft uppercase">{label}</div>
+            <div className="text-xs tracking-wider text-ink-soft uppercase">{label}</div>
           </div>
         ))}
       </div>

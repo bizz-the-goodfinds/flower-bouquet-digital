@@ -19,7 +19,7 @@ export function SiteFooter() {
         <FooterCol title="Occasions" links={OCCASIONS.slice(0, 7).map((o) => ({ href: `/occasions/${o.slug}`, label: o.name }))} />
         <FooterCol title="Flower meanings" links={FLOWER_FAMILIES.slice(0, 7).map((f) => ({ href: `/flowers/${f.slug}`, label: f.name }))} />
         <FooterCol
-          title="Petalpost"
+          title="Flower Bouquet Digital"
           links={[
             ...GUIDES.map((g) => ({ href: `/guides/${g.slug}`, label: g.title.split(/[:(–]/)[0].trim() })),
             { href: "/faq", label: "FAQ" },

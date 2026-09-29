@@ -25,5 +25,5 @@ export default async function Image({ params }: { params: Promise<{ slug: string
       subtitle: "Opens soon ✨",
     });
   }
-  return bouquetOgImage({ design: null, kicker: "petalpost", title: "Digital bouquets that never wilt" });
+  return bouquetOgImage({ design: null, kicker: "flower bouquet digital", title: "Digital bouquets that never wilt" });
 }

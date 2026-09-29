@@ -6,11 +6,13 @@ import { ArrowRight, Eye, Flower2, RotateCcw } from "lucide-react";
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { NoteCard } from "@/components/bouquet/note-card";
 import { SharePanel } from "@/components/share/share-panel";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { BuilderCanvas } from "./canvas";
 import { CardStep } from "./card-step";
 import { ItemToolbar, TopBar } from "./toolbars";
 import { Tray } from "./tray";
-import { arrange } from "@/lib/bouquet/composition";
+import { arrange, normalizeDesign } from "@/lib/bouquet/composition";
 import { readDraft, saveDraft, useBuilder, type Step } from "@/lib/bouquet/store";
 import { FAMILY_BY_SLUG } from "@/lib/content/flowers";
 import { OCCASIONS, OCCASION_BY_SLUG } from "@/lib/content/occasions";
@@ -31,7 +33,7 @@ function presetFor(occasionSlug: string) {
   const o = OCCASION_BY_SLUG.get(occasionSlug);
   if (!o) return null;
   return {
-    design: { items: arrange(o.preset.stems), wrapper: o.preset.wrapper, ribbon: o.preset.ribbon, background: o.preset.background },
+    design: { items: arrange(o.preset.stems, Date.now(), o.preset.wrap), wrapper: o.preset.wrap, paper: o.preset.paper, ribbon: o.preset.ribbon, background: o.preset.background },
     occasion: o.slug,
   };
 }
@@ -40,6 +42,7 @@ export function Builder({ params }: { params: BuilderParams }) {
   const step = useBuilder((s) => s.step);
   const count = useBuilder((s) => s.design.items.length);
   const init = useRef(false);
+  const [confirmDialog, confirm] = useConfirm();
   const [editState, setEditState] = useState<"idle" | "loading" | "failed">(params.edit ? "loading" : "idle");
 
   useEffect(() => {
@@ -55,7 +58,7 @@ export function Builder({ params }: { params: BuilderParams }) {
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error("not found"))))
         .then((src) => {
           useBuilder.getState().load({
-            design: src.design,
+            design: normalizeDesign(src.design),
             card: src.card,
             occasion: src.occasion,
             revealAt: toLocalInput(src.revealAt),
@@ -102,7 +105,18 @@ export function Builder({ params }: { params: BuilderParams }) {
     };
   }, []);
 
-  const surprise = () => {
+  const surprise = async () => {
+    const st0 = useBuilder.getState();
+    if (st0.design.items.length) {
+      const ok = await confirm({
+        title: "Swap for a surprise bouquet?",
+        description: "We'll replace your current flowers with a styled bouquet. You can undo this.",
+        preview: <BouquetSvg design={st0.design} className="h-auto w-full rounded-2xl" label="Current bouquet" />,
+        confirmLabel: "Surprise me ✨",
+        cancelLabel: "Keep mine",
+      });
+      if (!ok) return;
+    }
     const o = OCCASIONS[Math.floor(Math.random() * OCCASIONS.length)];
     const p = presetFor(o.slug)!;
     const st = useBuilder.getState();
@@ -129,38 +143,43 @@ export function Builder({ params }: { params: BuilderParams }) {
     );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-6 pb-28 short:pt-3 short:pb-10 lg:pb-12">
+    <div
+      className={`mx-auto max-w-6xl px-4 pt-6 pb-16 lg:pb-12 ${step === "arrange" ? "flex h-[calc(100dvh-4rem)] min-h-[26rem] flex-col !pt-3 !pb-0 short:min-h-0 compact:!pt-1 lg:!pt-5 lg:!pb-5" : ""}`}
+    >
+      {confirmDialog}
       <Stepper step={step} />
 
       {step === "arrange" && (
-        <div className="mt-6 grid grid-cols-1 gap-6 short:mt-3 short:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] short:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
-          <div className="sticky top-16 z-20 -mx-4 min-w-0 self-start bg-cream/95 px-4 pb-1 backdrop-blur-md short:mx-0 short:bg-transparent short:px-0 short:backdrop-blur-none lg:top-20 lg:mx-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-2 compact:mt-0 short:flex-row short:gap-4 lg:mt-5 lg:flex-row lg:gap-8">
+          <div className="flex min-h-0 min-w-0 flex-[1.2] flex-col short:flex-1 lg:flex-1">
             <TopBar onSurprise={surprise} />
-            <div className="relative mx-auto mt-1 w-[min(100%,max(30dvh,190px))] short:w-[min(100%,calc((100dvh-10rem)*0.8))] lg:w-[min(100%,calc((100dvh-16rem)*0.8))] lg:max-w-[520px]">
-              <BuilderCanvas />
-              {count === 0 && (
-                <div className="pointer-events-none absolute inset-0 grid place-items-center p-8 text-center">
-                  <div className="pointer-events-auto rounded-2xl bg-paper/90 p-5 backdrop-blur-sm">
-                    <Flower2 className="mx-auto size-8 text-petal-deep" aria-hidden />
-                    <p className="mt-2 font-display text-2xl">Start with a flower</p>
-                    <p className="mt-1 text-sm text-ink-soft">Tap any flower to add it, or let us style one.</p>
-                    <button type="button" onClick={surprise} className="btn-secondary mt-4 !py-2 text-sm">
-                      Surprise me ✨
-                    </button>
-                  </div>
+            <div className="mx-auto flex min-h-0 w-full flex-1 items-start justify-center lg:mt-1">
+              <div className="relative aspect-[4/5] h-full max-w-full">
+                <BuilderCanvas />
+                <div className="pointer-events-none absolute inset-x-0 -bottom-1 z-10 flex justify-center px-1 lg:hidden [&>*]:pointer-events-auto">
+                  <ItemToolbar />
                 </div>
-              )}
-              <div className="mt-2 flex min-h-12 min-w-0 justify-center">
-                <ItemToolbar />
+                {count === 0 && (
+                  <div className="pointer-events-none absolute inset-0 grid place-items-center p-3 text-center sm:p-8">
+                    <div className="pointer-events-auto rounded-2xl bg-paper/90 p-3 backdrop-blur-sm sm:p-5">
+                      <Flower2 className="mx-auto size-7 text-petal-deep" aria-hidden />
+                      <p className="mt-1 font-display text-xl sm:text-2xl">Start with a flower</p>
+                      <p className="mt-1 hidden text-sm text-ink-soft min-[400px]:block">Tap any flower to add it, or let us style one.</p>
+                      <button type="button" onClick={surprise} className="btn-secondary mt-3 !py-2 text-sm">
+                        Surprise me ✨
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+            <div className="hidden h-14 shrink-0 justify-center pt-2 lg:flex">
+              <ItemToolbar />
+            </div>
           </div>
-          <div className="min-w-0 space-y-4">
-            <Tray />
-            <div
-              data-bottom-bar
-              className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-cream/95 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md short:static short:border-0 short:bg-transparent short:p-0 lg:static lg:border-0 lg:bg-transparent lg:p-0"
-            >
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 short:flex-[1.3] lg:w-[440px] lg:flex-none lg:gap-3">
+            <Tray className="flex-1" />
+            <div data-bottom-bar className="shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:pb-0">
               <button
                 type="button"
                 className="btn-primary w-full text-base"
@@ -188,27 +207,57 @@ export function Builder({ params }: { params: BuilderParams }) {
   );
 }
 
+/** Clickable progress: go back to Arrange any time, jump to Write once there are flowers. Locked after sending. */
 function Stepper({ step }: { step: Step }) {
-  const steps: [Step, string][] = [
-    ["arrange", "Arrange"],
-    ["card", "Write"],
-    ["sent", "Send"],
+  const count = useBuilder((s) => s.design.items.length);
+  const steps: { id: Step; label: string; hint: string }[] = [
+    { id: "arrange", label: "Arrange", hint: "Pick and arrange flowers" },
+    { id: "card", label: "Write", hint: count ? "Write your card" : "Add a flower first" },
+    { id: "sent", label: "Send", hint: "Preview & send from the Write step" },
   ];
-  const idx = steps.findIndex(([s]) => s === step);
+  const idx = steps.findIndex((s) => s.id === step);
+  const reachable = (id: Step) => step !== "sent" && id !== step && (id === "arrange" || (id === "card" && count > 0));
   return (
-    <ol className="flex items-center justify-center gap-1.5 text-sm sm:gap-2" aria-label="Progress">
-      {steps.map(([s, label], i) => (
-        <li key={s} className="flex items-center gap-2" aria-current={i === idx ? "step" : undefined}>
-          <span
-            className={`grid size-7 place-items-center rounded-full border-[1.5px] font-mono text-xs ${i <= idx ? "border-ink bg-ink text-cream" : "border-line text-ink-soft"}`}
-          >
-            {i + 1}
-          </span>
-          <span className={i === idx ? "font-medium" : "text-ink-soft"}>{label}</span>
-          {i < steps.length - 1 && <span aria-hidden className="mx-0.5 h-px w-4 bg-line min-[360px]:w-6 sm:mx-1 sm:w-10" />}
-        </li>
-      ))}
-    </ol>
+    <nav aria-label="Progress">
+      <ol className={`flex items-center justify-center gap-1 text-sm sm:gap-2 ${step === "arrange" ? "compact:hidden" : ""}`}>
+        {steps.map((s, i) => {
+          const can = reachable(s.id);
+          const content = (
+            <>
+              <span
+                className={`grid size-7 place-items-center rounded-full border-[1.5px] font-mono text-xs transition ${i <= idx ? "border-ink bg-ink text-cream" : "border-line text-ink-soft"} ${can ? "group-hover:scale-110" : ""}`}
+              >
+                {i + 1}
+              </span>
+              <span className={`${i === idx ? "font-medium" : "text-ink-soft"} ${can ? "underline-offset-4 group-hover:underline" : ""}`}>{s.label}</span>
+            </>
+          );
+          return (
+            <li key={s.id} className="flex items-center gap-1 sm:gap-2" aria-current={i === idx ? "step" : undefined}>
+              <Tooltip label={s.hint} side="bottom">
+                {can ? (
+                  <button
+                    type="button"
+                    className="group flex min-h-11 items-center gap-2 rounded-full px-1"
+                    onClick={() => {
+                      useBuilder.getState().setStep(s.id);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <span className="flex min-h-11 items-center gap-2 px-1" aria-disabled={i !== idx}>
+                    {content}
+                  </span>
+                )}
+              </Tooltip>
+              {i < steps.length - 1 && <span aria-hidden className="h-px w-3 bg-line min-[360px]:w-5 sm:w-10" />}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
@@ -235,7 +284,7 @@ function Sent() {
           .
         </p>
         <div className="mt-6">
-          <SharePanel url={url} to={card.to} from={card.from} design={design} />
+          <SharePanel url={url} to={card.to} from={card.from} design={design} message={card.message} style={card.style} />
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
           <a href={`/b/${sent.slug}`} target="_blank" rel="noopener" className="btn-ghost border border-line">

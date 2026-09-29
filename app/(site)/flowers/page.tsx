@@ -5,7 +5,7 @@ import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { FLOWER_FAMILIES } from "@/lib/content/flowers";
 
 export const metadata: Metadata = {
-  title: "Flower Meanings – What Every Flower & Color Symbolizes",
+  title: "Flower Meanings by Flower & Color",
   description:
     "A friendly guide to flower meanings: roses, tulips, sunflowers, peonies, lilies and more, with color meanings and the best occasion for each.",
   alternates: { canonical: "/flowers" },

@@ -18,11 +18,11 @@ export const GUIDES: Guide[] = [
     title: "How to Send a Digital Flower Bouquet (Free, in 1 Minute)",
     metaDescription: "Step-by-step: how to make and send a free digital flower bouquet with a personal note. Works on WhatsApp, Instagram, iMessage and email.",
     answer:
-      "To send a digital bouquet, open the Petalpost maker, tap flowers to add them, pick a wrapper and ribbon, write a note on the card, then tap Send. You get a short link to share on WhatsApp, Instagram, iMessage or email. It is free and needs no signup or app.",
+      "To send a digital bouquet, open the Flower Bouquet Digital maker, tap flowers to add them, pick a wrapper and ribbon, write a note on the card, then tap Send. You get a short link to share on WhatsApp, Instagram, iMessage or email. It is free and needs no signup or app.",
     published: "2026-09-29",
     updated: "2026-09-29",
     howTo: [
-      { name: "Open the bouquet maker", text: "Go to the Petalpost maker or pick an occasion preset to start with a ready-made bouquet." },
+      { name: "Open the bouquet maker", text: "Go to the Flower Bouquet Digital maker or pick an occasion preset to start with a ready-made bouquet." },
       { name: "Add and arrange flowers", text: "Tap flowers and greenery to add them. Drag to move, pinch or use the toolbar to resize and rotate, or tap Shuffle to auto-arrange." },
       { name: "Choose wrapper, ribbon and background", text: "Pick a paper wrap, a ribbon color and a background that fits the mood." },
       { name: "Write your card", text: "Add who it is for, who it is from, and a message. Pick a handwriting style. Optionally set a date and time for it to open." },
@@ -54,7 +54,7 @@ export const GUIDES: Guide[] = [
       },
     ],
     faq: [
-      { q: "Is Petalpost free?", a: "Yes, completely free. No account or app is needed to send or open a bouquet." },
+      { q: "Is Flower Bouquet Digital free?", a: "Yes, completely free. No account or app is needed to send or open a bouquet." },
       { q: "Does the recipient need an app?", a: "No. The bouquet opens in any mobile or desktop browser." },
       { q: "Can I schedule a bouquet?", a: "Yes. Set an open date and time on the card; the link shows a countdown until then." },
       { q: "Can I delete a bouquet after sending?", a: "Yes. From the My bouquets page on the same device, you can delete any bouquet you sent." },
@@ -134,7 +134,7 @@ export const GUIDES: Guide[] = [
 export const GUIDE_BY_SLUG = new Map(GUIDES.map((g) => [g.slug, g]));
 
 export const SITE_FAQ: { q: string; a: string }[] = [
-  { q: "What is Petalpost?", a: "Petalpost is a free online tool for making and sending digital flower bouquets with a personal note, shared as a link." },
+  { q: "What is Flower Bouquet Digital?", a: "Flower Bouquet Digital is a free online tool for making and sending digital flower bouquets with a personal note, shared as a link." },
   { q: "Is it really free?", a: "Yes. Making, sending and opening bouquets is free, with no account and no app required." },
   { q: "How does the recipient open the bouquet?", a: "They tap the link. It opens in any browser, the bouquet unwraps and blooms, and then your card appears." },
   { q: "Can I schedule a bouquet for a specific time?", a: "Yes. Set an open date and time and the link will show a countdown until the bouquet blooms." },

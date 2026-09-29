@@ -38,7 +38,7 @@ export async function renderBouquetPng(design: Design, opts: { format: ExportFor
   const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
   try {
     const img = await loadImage(url);
-    const display = cssFont("--font-instrument", "Georgia, serif");
+    const display = cssFont("--font-playfair", "Georgia, serif");
     const mono = cssFont("--font-geist-mono", "ui-monospace, monospace");
     await Promise.all([document.fonts.load(`italic 80px ${display}`), document.fonts.load(`24px ${mono}`)]).catch(() => {});
 
@@ -79,7 +79,7 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, max: number) {
 
 /** Share the file where possible (saves to Photos on iOS), otherwise download it. */
 export async function saveImage(blob: Blob, filename: string) {
-  const file = new File([blob], filename, { type: "image/png" });
+  const file = new File([blob], filename, { type: blob.type || "image/png" });
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
   const touch = matchMedia("(pointer: coarse)").matches;
   if (touch && nav.canShare?.({ files: [file] })) {

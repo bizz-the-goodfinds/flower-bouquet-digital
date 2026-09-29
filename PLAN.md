@@ -1,6 +1,6 @@
 # Digital Flower Bouquet — Product & Build Plan
 
-Status: v1 built 2026-09-29 (see README.md). All MVP items in section 3 are implemented, including optional sign-in (email magic link; Google behind a flag), edit after sending, link expiry, card stickers, and Turnstile (active once keys are set). Defaults chosen for open inputs: brand "Petalpost", visual direction A, coded SVG flowers.
+Status (2026-09-29): v1 is built. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
 
 ---
 
@@ -424,3 +424,33 @@ See the checklist in the chat reply / below.
 11. Target markets / languages (affects consent banner, content, hreflang).
 12. Include any v2 features in first build? (AI note writer needs an Anthropic API key.)
 13. Monetization now, later, or never?
+
+---
+
+## 15. Build status (updated 2026-09-29)
+
+### Done
+- Builder: 31 flowers/fillers + 4 greenery, 5 wrap shapes (cone, tissue wrap, sleeve, hat box, vase) × 12 papers, 7 ribbons, 7 backgrounds; drag, pinch/rotate, keyboard, undo/redo, shuffle, surprise, occasion presets; picker order Wrap → Wrap colour → Flowers → Fillers & greens → Ribbon → Background; clickable steps; tooltips; fits one screen on every size.
+- Card: 6 templates, 6 letter fonts (Playfair Display, Handlee, Playwrite CA Guides, Cutive Mono, Sacramento, Bitcount Single), 18 stickers, envelope colour/seal/liner, scheduled reveal, link expiry; live bouquet + card preview.
+- Preview before sending: full-screen replay of exactly what the recipient sees, with Keep editing / Replay / Send at the top.
+- Sharing: short link, dynamic OG image per bouquet (and per occasion/flower/guide page), WhatsApp/Telegram/X/SMS/email/native share, QR, PNG post + 9:16 story, MP4/WebM video and GIF of the full opening (envelope → bloom → card).
+- Recipient: envelope → unwrap → bloom → card; reactions + reply; send one back; save image/video/GIF; report; fits one screen on desktop.
+- Accounts (optional): email + password without email verification, sync across devices, claim device bouquets, forgot password, edit/delete sent bouquets.
+- Safety: honeypot, IP-hash rate limits (bouquets, reactions, sign-ups), blocklist, reports with auto-hide, noindex bouquet pages, Turnstile ready.
+- SEO/AEO/GEO: 42 indexable pages with unique titles/descriptions/canonicals/OG, JSON-LD (Organization, WebSite, WebApplication, FAQ, HowTo, Article, Breadcrumb), sitemap, robots (AI crawlers allowed), llms.txt + llms-full.txt, favicon/PNG/maskable icons, manifest.
+- Analytics: Clarity + Firebase + Vercel, consent (EU/UK opt-in), typed events, masked notes.
+- Error pages (404, bouquet not found, error boundary, global error), privacy policy and terms updated.
+- QA: overflow checks on every page at 9 widths, CTA visibility at 10 viewports, Lighthouse CI in GitHub Actions.
+
+### Remaining (needs you or a decision)
+- Vercel: attach `flower-bouquet-digital.vercel.app` to the project, turn off Deployment Protection for Production, set env vars.
+- Supabase: add `/auth/callback` redirect URLs; add custom SMTP (e.g. Resend) so password-reset emails are branded and not rate-limited.
+- Rotate the database password and service-role key that were shared in chat.
+- Optional keys: Cloudflare Turnstile; Google OAuth (then set `NEXT_PUBLIC_AUTH_GOOGLE=1`).
+- A real contact email for the privacy/terms pages.
+- Submit the sitemap to Google Search Console and Bing Webmaster Tools; verify Clarity masking on production.
+- Sign-ups are not email-verified, so someone could register an email they don't own. Acceptable for syncing bouquets; revisit before adding anything sensitive.
+
+### Not started (v2 ideas from section 3)
+AI note writer, song/voice attachments, group bouquets, public garden gallery, streaks/badges, more languages, PWA push notifications, monetization, commissioned flower art, Sentry error tracking.
+
