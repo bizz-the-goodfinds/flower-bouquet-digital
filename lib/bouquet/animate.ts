@@ -4,6 +4,7 @@ import { BACKGROUNDS, DEFAULTS } from "./catalog";
 import { CARD_FONTS, CARD_TEMPLATES, normalizeCardFont, type CardStyle } from "./card";
 import { CANVAS, bouquetLayers, type Design } from "./composition";
 import { ENVELOPE_COLORS, envelopeSvg, normalizeEnvelope } from "./envelope";
+import { logoSvg } from "../brand";
 import { site } from "../site";
 
 /**
@@ -17,6 +18,7 @@ type Assets = {
   bg: string;
   dark: boolean;
   envelope: HTMLImageElement;
+  logo: HTMLImageElement;
   back: HTMLImageElement;
   front: HTMLImageElement;
   heads: { img: HTMLImageElement; x: number; y: number; reach: number }[];
@@ -48,8 +50,9 @@ async function prepare(src: AnimSource, pxPerUnit: number, envelopePx: number): 
   const bg = BACKGROUNDS[d.background] ?? BACKGROUNDS[DEFAULTS.background];
   const full = (body: string) => loadSvg(svgDoc(`0 0 ${CANVAS.w} ${CANVAS.h}`, CANVAS.w * pxPerUnit, CANVAS.h * pxPerUnit, body));
   const env = normalizeEnvelope(src.style.envelope);
-  const [envelope, backImg, frontImg, ...headImgs] = await Promise.all([
+  const [envelope, logo, backImg, frontImg, ...headImgs] = await Promise.all([
     loadSvg(svgDoc("0 0 380 260", envelopePx, (envelopePx * 260) / 380, envelopeSvg(env, src.from))),
+    loadSvg(logoSvg().replace("<svg ", '<svg width="128" height="128" ')),
     full(back),
     full(front),
     ...heads.map((h) => {
@@ -62,6 +65,7 @@ async function prepare(src: AnimSource, pxPerUnit: number, envelopePx: number): 
     bg: bg.fill,
     dark: Boolean(bg.dark),
     envelope,
+    logo,
     back: backImg,
     front: frontImg,
     heads: heads.map((h, i) => ({ img: headImgs[i], x: h.item.x, y: h.item.y, reach: h.reach })),
@@ -95,6 +99,9 @@ const easeOutBack = (t: number) => {
   const x = clamp01(t) - 1;
   return 1 + (c + 1) * x * x * x + c * x * x;
 };
+
+/** How long the first (cover) frame is held before the opening plays. */
+const COVER_MS = 600;
 
 // Timeline (ms)
 const T = { envIn: 0, envHold: 1500, envOut: 2000, bloom: 1900, card: 3700, end: 6800 };
@@ -154,7 +161,6 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
   const { W, H, src, fonts } = st;
   const env = normalizeEnvelope(src.style.envelope);
   const envColors = ENVELOPE_COLORS[env.color];
-  const ink = A.dark ? "#F6EFFF" : "#1B1A17";
 
   // Background: cream page for the envelope, cross-fading into the bouquet background.
   ctx.fillStyle = "#FBF6EE";
@@ -168,7 +174,8 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
   // 1) Envelope with the recipient's name, then it lifts away.
   if (ms < T.envOut + 100) {
     const out = easeIn((ms - T.envHold) / (T.envOut - T.envHold));
-    const inn = easeOut(ms / 500);
+    // Fully visible from frame 0: the first frame is the video/GIF cover, so it shows the sender's envelope.
+    const inn = 1;
     const ew = W * (st.story ? 0.78 : 0.72);
     const eh = (ew * 260) / 380;
     const cx = W / 2;
@@ -194,8 +201,8 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
     ctx.drawImage(A.envelope, -ew / 2, -eh / 2, ew, eh);
     ctx.restore();
     // "tap" pulse on the seal
-    if (ms > 700 && ms < T.envHold) {
-      const p = ((ms - 700) % 700) / 700;
+    if (ms > 300 && ms < T.envHold) {
+      const p = ((ms - 300) % 700) / 700;
       ctx.save();
       ctx.globalAlpha = (1 - p) * 0.6 * inn;
       ctx.strokeStyle = envColors.seal;
@@ -236,6 +243,9 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
     ctx.restore();
   }
 
+  // Petals drift down once it's unwrapped, like the petal rain on the recipient page.
+  drawPetals(ctx, W, H, ms - T.envOut, A.dark);
+
   // 3) Note card slides up, like the card on the recipient page.
   const hasCard = Boolean(src.to || src.from || src.message);
   const c = easeOut((ms - T.card) / 800);
@@ -250,7 +260,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
     ctx.restore();
     const lh = fs * 1.35;
     const chH = pad * 1.6 + W * 0.03 + lines.length * lh + (src.from ? lh * 1.3 : 0) + pad * 0.6;
-    const cardTop = (st.story ? H * 0.6 : H * 0.55) + (1 - c) * H * 0.12;
+    const cardTop = (st.story ? H * 0.58 : H * 0.5) + (1 - c) * H * 0.12;
     ctx.save();
     ctx.globalAlpha = c;
     ctx.translate(W / 2, cardTop + chH / 2);
@@ -311,14 +321,79 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
     ctx.restore();
   }
 
-  // Watermark
+  drawBrand(ctx, A, st);
+}
+
+/** Branded pill at the bottom of every frame: logo mark, wordmark and site address. */
+export function drawBrandPill(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, W: number, H: number, fonts: { display: string; mono: string }, story: boolean) {
+  const h = Math.round(W * (story ? 0.085 : 0.09));
+  const logoSize = h * 0.78;
+  const name = site.name;
+  const domain = site.url.replace(/^https?:\/\//, "");
   ctx.save();
-  ctx.fillStyle = A.dark && ms > T.envOut ? "#F6EFFF" : ink;
-  ctx.globalAlpha = 0.5;
-  ctx.textAlign = "center";
-  ctx.font = `${Math.round(W * (st.story ? 0.022 : 0.026))}px ${fonts.mono}`;
-  ctx.fillText(site.url.replace(/^https?:\/\//, ""), W / 2, H - H * (st.story ? 0.03 : 0.02));
+  const nameFont = `italic ${Math.round(h * 0.36)}px ${fonts.display}`;
+  const urlFont = `${Math.round(h * 0.2)}px ${fonts.mono}`;
+  ctx.font = nameFont;
+  const nameW = ctx.measureText(name).width;
+  ctx.font = urlFont;
+  const urlW = ctx.measureText(domain).width;
+  const pad = h * 0.22;
+  const w = pad + logoSize + pad * 0.7 + Math.max(nameW, urlW) + pad * 1.4;
+  const x = (W - w) / 2;
+  const y = H - h - H * (story ? 0.035 : 0.025);
+  ctx.fillStyle = "#1B1A17";
+  roundRect(ctx, x + 4, y + 4, w, h, h / 2);
+  ctx.fill();
+  ctx.fillStyle = "#FFFDF8";
+  roundRect(ctx, x, y, w, h, h / 2);
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#1B1A17";
+  ctx.stroke();
+  ctx.drawImage(logo, x + pad, y + (h - logoSize) / 2, logoSize, logoSize);
+  const tx = x + pad + logoSize + pad * 0.7;
+  ctx.fillStyle = "#1B1A17";
+  ctx.textAlign = "left";
+  ctx.font = nameFont;
+  ctx.fillText(name, tx, y + h * 0.52);
+  ctx.globalAlpha = 0.6;
+  ctx.font = urlFont;
+  ctx.fillText(domain, tx, y + h * 0.8);
   ctx.restore();
+}
+
+function drawBrand(ctx: CanvasRenderingContext2D, A: Assets, st: Stage) {
+  drawBrandPill(ctx, A.logo, st.W, st.H, st.fonts, st.story);
+}
+
+const PETAL_COUNT = 14;
+const PETAL_COLORS = ["#F4A6C0", "#F7DE8A", "#C9B8F2", "#F28A6B"];
+
+/** Same timing and path as the CSS `pp-petal` rain (components/reveal/recipient-view.tsx), in canvas pixels. */
+function drawPetals(ctx: CanvasRenderingContext2D, W: number, H: number, since: number, dark: boolean) {
+  if (since <= 0) return;
+  const pw = W * 0.024;
+  const ph = W * 0.032;
+  for (let i = 0; i < PETAL_COUNT; i++) {
+    const start = 600 + (i % 7) * 450;
+    const dur = 5000 + (i % 5) * 1000;
+    const p = (since - start) / dur;
+    if (p <= 0 || p >= 1) continue;
+    const alpha = p < 0.1 ? (p / 0.1) * 0.9 : 0.9 * (1 - (p - 0.1) / 0.9);
+    const x = ((i * 73) % 100) / 100 * W + p * W * 0.08;
+    const y = -H * 0.05 + p * H * 1.1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    ctx.rotate((p * 540 * Math.PI) / 180);
+    ctx.fillStyle = i % 4 === 3 && dark ? "#FFFFFF" : PETAL_COLORS[i % 4];
+    ctx.beginPath();
+    ctx.moveTo(-pw / 2, -ph / 2);
+    ctx.quadraticCurveTo(pw / 2, -ph / 2, pw / 2, ph / 2);
+    ctx.quadraticCurveTo(-pw / 2, ph / 2, -pw / 2, -ph / 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 export function videoSupport() {
@@ -350,10 +425,12 @@ export async function renderBloomVideo(src: AnimSource, opts: { onProgress?: (p:
   const done = new Promise<Blob>((resolve) => (rec.onstop = () => resolve(new Blob(chunks, { type: support.mime.split(";")[0] }))));
 
   rec.start(250);
-  const start = performance.now();
+  // Push the cover frame right away so the file never starts on a blank (black) frame.
+  (stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void }).requestFrame?.();
+  const start = performance.now() + COVER_MS;
   await new Promise<void>((resolve) => {
     const tick = () => {
-      const ms = performance.now() - start;
+      const ms = Math.max(0, performance.now() - start);
       drawFrame(ctx, A, st, Math.min(ms, T.end));
       opts.onProgress?.(Math.min(1, ms / T.end));
       if (ms < T.end) requestAnimationFrame(tick);
@@ -378,17 +455,15 @@ export async function renderBloomGif(src: AnimSource, opts: { onProgress?: (p: n
   const [A, fonts] = await Promise.all([prepare(src, (W * 0.66) / CANVAS.w, W * 0.72), loadFonts(src.style)]);
   const st: Stage = { W, H, story: false, src, fonts };
 
-  // Palette from an envelope frame + the final frame keeps colours stable (no flicker).
-  const sample = (ms: number) => {
+    const sample = (ms: number) => {
     drawFrame(ctx, A, st, ms);
     return ctx.getImageData(0, 0, W, H).data;
   };
-  const a = sample(900);
-  const b = sample(T.end);
-  const both = new Uint8ClampedArray(a.length + b.length);
-  both.set(a);
-  both.set(b, a.length);
-  const palette = quantize(both, 256);
+  // Envelope cover, the card mid-slide and the final frame, so every stage keeps its true colours.
+  const frames = [sample(0), sample(T.card + 400), sample(T.end)];
+  const all = new Uint8ClampedArray(frames.reduce((n, f) => n + f.length, 0));
+  frames.reduce((off, f) => (all.set(f, off), off + f.length), 0);
+  const palette = quantize(all, 256);
 
   const gif = GIFEncoder();
   const fps = 12;
@@ -396,7 +471,7 @@ export async function renderBloomGif(src: AnimSource, opts: { onProgress?: (p: n
   for (let i = 0; i <= total; i++) {
     drawFrame(ctx, A, st, (i / total) * T.end);
     const index = applyPalette(ctx.getImageData(0, 0, W, H).data, palette);
-    gif.writeFrame(index, W, H, { palette, delay: i === total ? 2500 : Math.round(1000 / fps), repeat: 0 });
+    gif.writeFrame(index, W, H, { palette, delay: i === total ? 2500 : i === 0 ? COVER_MS : Math.round(1000 / fps), repeat: 0 });
     opts.onProgress?.(i / total);
     if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0)); // keep the UI responsive
   }

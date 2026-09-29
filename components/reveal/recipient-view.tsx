@@ -3,26 +3,49 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Clapperboard, Download, Film, Flag, Flower2 } from "lucide-react";
+import { Clapperboard, Download, Film, Flag, Flower2, History } from "lucide-react";
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { NoteCard } from "@/components/bouquet/note-card";
 import { useExport } from "@/components/share/use-export";
 import { Logo } from "@/components/ui/logo";
 import { Tooltip } from "@/components/ui/tooltip";
 import { BACKGROUNDS } from "@/lib/bouquet/catalog";
-import { REACTIONS } from "@/lib/bouquet/card";
+import type { Conversation } from "@/lib/bouquet/chat";
 import { normalizeEnvelope } from "@/lib/bouquet/envelope";
-import { isMine } from "@/lib/local";
+import { addReceived, getReceived, isMine, viewerId } from "@/lib/local";
+import { MiniBloom } from "@/components/ui/bloom-loader";
 import { track } from "@/lib/analytics/track";
-import type { PublicBouquet } from "@/lib/server/bouquets";
+import type { PublicBouquet, ThreadItem } from "@/lib/server/bouquets";
+import { PreviewChat, RecipientChat, SenderChat } from "./chat";
 import { Envelope } from "./envelope";
+
+/** The sender's own preview (My bouquets): shows every recipient's chat and never counts as an open. */
+export type SenderPreview = { token: string | null; conversations: Conversation[]; refreshKey?: number; extra?: ReactNode };
 
 /**
  * The recipient's experience: envelope → unwrap → bloom → card, with actions in a top bar.
  * `preview` renders the exact same flow for the sender before sending (no tracking, no writes).
  */
-export function RecipientView({ bouquet, preview, previewActions }: { bouquet: PublicBouquet; preview?: boolean; previewActions?: ReactNode }) {
+export function RecipientView({
+  bouquet,
+  preview,
+  previewActions,
+  link = null,
+  thread = [],
+  sender,
+}: {
+  bouquet: PublicBouquet;
+  preview?: boolean;
+  previewActions?: ReactNode;
+  /** Personal link key this page was opened with. */
+  link?: string | null;
+  /** Earlier bouquets in the send-one-back chain, oldest first. */
+  thread?: ThreadItem[];
+  sender?: SenderPreview;
+}) {
   const [open, setOpen] = useState(false);
+  const [conversation, setConversation] = useState<string | null>(null);
+  const [mine, setMine] = useState(false);
   const shownAt = useRef(0);
   const reduce = useReducedMotion();
   const bg = BACKGROUNDS[bouquet.design.background] ?? BACKGROUNDS.cream;
@@ -32,14 +55,40 @@ export function RecipientView({ bouquet, preview, previewActions }: { bouquet: P
 
   useEffect(() => {
     shownAt.current = performance.now();
-    if (!preview) track("bouquet_viewed", { is_creator: isMine(bouquet.slug) });
-  }, [bouquet.slug, preview]);
+    if (preview) return;
+    const own = isMine(bouquet.slug);
+    track("bouquet_viewed", { is_creator: own });
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setMine(own);
+      if (own) return;
+      // Our side of the chat: the personal link, else the chat this device already has, else this device.
+      const known = getReceived().find((e) => e.slug === bouquet.slug);
+      let conv = link ? `l:${link}` : (known?.conversation ?? `d:${viewerId()}`);
+      const res = await fetch(`/api/bouquets/${bouquet.slug}/receive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation: conv, link }),
+      }).catch(() => null);
+      const data = res?.ok ? ((await res.json()) as { conversation: string; own?: boolean }) : null;
+      if (cancelled) return;
+      if (data?.own) return setMine(true);
+      if (data?.conversation) conv = data.conversation;
+      setConversation(conv);
+      addReceived({ slug: bouquet.slug, link, conversation: conv, to: bouquet.to, from: bouquet.from, receivedAt: new Date().toISOString() });
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [bouquet.slug, bouquet.to, bouquet.from, preview, link]);
 
   const unwrap = () => {
     setOpen(true);
     if (preview) return;
     track("bouquet_unwrapped", { time_to_unwrap_ms: Math.round(performance.now() - shownAt.current) });
-    if (!isMine(bouquet.slug)) fetch(`/api/bouquets/${bouquet.slug}/view`, { method: "POST", keepalive: true }).catch(() => {});
+    if (!isMine(bouquet.slug))
+      fetch(`/api/bouquets/${bouquet.slug}/view`, { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ link }) }).catch(() => {});
   };
 
   const iconBtn = `flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-40 ${dark ? "border-cream/30 text-cream hover:bg-cream/10" : "border-line bg-paper/80 text-ink hover:bg-paper"}`;
@@ -73,8 +122,11 @@ export function RecipientView({ bouquet, preview, previewActions }: { bouquet: P
                 ).map(([kind, label, short, Icon]) => (
                   <Tooltip key={kind} label={label} side="bottom">
                     <button className={iconBtn} aria-label={label} onClick={() => exp.run(kind)} disabled={exp.busy !== null}>
-                      {exp.busy === kind && kind !== "story" ? (
-                        <span className="font-mono text-[10px]">{Math.round(exp.progress * 100)}%</span>
+                      {exp.busy === kind ? (
+                        <span className="flex items-center gap-1 font-mono text-[10px]">
+                          <MiniBloom className="size-3.5" />
+                          {kind !== "story" && `${Math.round(exp.progress * 100)}%`}
+                        </span>
                       ) : (
                         <>
                           <Icon className="size-[18px]" aria-hidden />
@@ -136,7 +188,28 @@ export function RecipientView({ bouquet, preview, previewActions }: { bouquet: P
                 </motion.div>
               )}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0.3 : 2.4 }} className="mx-auto w-full max-w-md">
-                <Respond bouquet={bouquet} dark={Boolean(bg.dark)} preview={preview} />
+                <div className="space-y-3 text-center">
+                  {sender ? (
+                    <>
+                      <SenderChat slug={bouquet.slug} token={sender.token} to={bouquet.to} conversations={sender.conversations} refreshKey={sender.refreshKey} />
+                      {sender.extra}
+                    </>
+                  ) : preview ? (
+                    <PreviewChat />
+                  ) : mine ? (
+                    <p className={`rounded-2xl px-4 py-3 text-sm ${bg.dark ? "bg-cream/10 text-cream" : "bg-paper/80 text-ink"}`}>
+                      This is your bouquet 💐 See opens and chat with {bouquet.to || "them"} in{" "}
+                      <Link href="/garden" className="underline underline-offset-2">
+                        My bouquets
+                      </Link>
+                      .
+                    </p>
+                  ) : (
+                    <RecipientChat slug={bouquet.slug} conversation={conversation} from={bouquet.from} />
+                  )}
+                  {thread.length > 0 && <ThreadStrip thread={thread} dark={Boolean(bg.dark)} />}
+                  <Footer slug={bouquet.slug} dark={Boolean(bg.dark)} hideReport={mine || Boolean(preview)} />
+                </div>
               </motion.div>
             </div>
           </motion.div>
@@ -146,78 +219,41 @@ export function RecipientView({ bouquet, preview, previewActions }: { bouquet: P
   );
 }
 
-function Respond({ bouquet, dark, preview }: { bouquet: PublicBouquet; dark: boolean; preview?: boolean }) {
-  const [picked, setPicked] = useState<string | null>(null);
-  const [reply, setReply] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+/** Earlier bouquets in this back-and-forth, so a reply reads like a thread. */
+function ThreadStrip({ thread, dark }: { thread: ThreadItem[]; dark: boolean }) {
+  return (
+    <div className={`rounded-[1.25rem] border px-3 py-3 text-left ${dark ? "border-cream/25 bg-cream/5 text-cream" : "border-line bg-paper/80 text-ink"}`}>
+      <p className="label flex items-center gap-1.5 !text-current opacity-70">
+        <History className="size-3.5" aria-hidden /> Earlier in this thread
+      </p>
+      <ol className="no-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1">
+        {thread.map((t) => (
+          <li key={t.slug} className="shrink-0">
+            <a href={`/b/${t.slug}`} className="flex w-28 flex-col items-center rounded-xl p-1.5 text-center transition hover:bg-ink/5">
+              <BouquetSvg design={t.design} className="h-20 w-auto" label={`Bouquet from ${t.from || "someone"}`} />
+              <span className="mt-1 w-full truncate text-xs font-medium" data-clarity-mask="true">
+                {t.from || "Someone"} → {t.to || "you"}
+              </span>
+              <span className="text-[11px] opacity-60">{new Date(t.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function Footer({ slug, dark, hideReport }: { slug: string; dark: boolean; hideReport: boolean }) {
   const [reported, setReported] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const mine = !preview && typeof window !== "undefined" && isMine(bouquet.slug);
-
-  const send = async () => {
-    if (!picked || preview) return;
-    setStatus("sending");
-    const res = await fetch("/api/reactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: bouquet.slug, emoji: picked, reply: reply || undefined }),
-    }).catch(() => null);
-    setStatus(res?.ok ? "sent" : "error");
-    if (res?.ok) track("reaction_sent", { emoji: picked, has_reply: Boolean(reply) });
-  };
-
   return (
-    <div className={`text-center ${dark ? "text-cream" : "text-ink"}`}>
-      {!mine && (
-        <div className="rounded-[1.25rem] border-[1.5px] border-ink bg-paper px-4 py-3 text-ink shadow-[3px_3px_0_0_var(--color-ink)]">
-          {status === "sent" ? (
-            <p className="font-display text-xl">
-              Sent {picked} {bouquet.from ? `to ${bouquet.from}` : ""}
-            </p>
-          ) : (
-            <>
-              <p className="text-sm font-medium">{preview ? "They can react here" : "How does it make you feel?"}</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-1" role="radiogroup" aria-label="Reaction">
-                {REACTIONS.map((r) => (
-                  <button
-                    key={r}
-                    role="radio"
-                    aria-checked={picked === r}
-                    onClick={() => setPicked(r)}
-                    className={`grid size-10 place-items-center rounded-full text-xl transition hover:scale-110 ${picked === r ? "scale-110 bg-petal/40 ring-2 ring-ink" : "bg-cream"}`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-              {picked && (
-                <div className="mt-2 flex gap-2">
-                  <input
-                    className="field !py-2"
-                    maxLength={280}
-                    placeholder={`Say something back${bouquet.from ? ` to ${bouquet.from}` : ""} (optional)`}
-                    value={reply}
-                    onChange={(e) => setReply(e.target.value)}
-                    data-clarity-mask="true"
-                    disabled={preview}
-                  />
-                  <button className="btn-primary !py-2" onClick={send} disabled={status === "sending" || preview}>
-                    Send
-                  </button>
-                </div>
-              )}
-              {status === "error" && <p className="mt-2 text-sm text-petal-deep">Couldn&rsquo;t send. Try again?</p>}
-            </>
-          )}
-        </div>
-      )}
-
-      <p className={`mt-3 text-xs ${dark ? "text-cream/60" : "text-ink-soft"}`}>
+    <div className={dark ? "text-cream" : "text-ink"}>
+      <p className={`text-xs ${dark ? "text-cream/60" : "text-ink-soft"}`}>
         Made with{" "}
         <Link href="/" className="underline underline-offset-2">
           Flower Bouquet Digital
         </Link>
-        {!mine && !preview && !reported && !reporting && (
+        {!hideReport && !reported && !reporting && (
           <button className="ml-2 inline-flex min-h-9 items-center gap-1 underline underline-offset-2" onClick={() => setReporting(true)}>
             <Flag className="size-3" aria-hidden /> Report
           </button>
@@ -230,7 +266,7 @@ function Respond({ bouquet, dark, preview }: { bouquet: PublicBouquet; dark: boo
           onSubmit={async (e) => {
             e.preventDefault();
             const reason = new FormData(e.currentTarget).get("reason") as string;
-            await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: bouquet.slug, reason }) }).catch(() => {});
+            await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug, reason }) }).catch(() => {});
             setReported(true);
           }}
         >

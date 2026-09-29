@@ -44,6 +44,7 @@ export default function Home() {
             </div>
             <ul className="mt-7 flex flex-wrap gap-2 text-sm text-ink/80">
               <li className="chip">💐 35 flowers & greens</li>
+              <li className="chip">🎀 8 wraps · 20 papers</li>
               <li className="chip">⏰ Schedule the reveal</li>
               <li className="chip">📲 WhatsApp & IG ready</li>
             </ul>
@@ -155,8 +156,8 @@ export default function Home() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             [CalendarClock, "Schedule the reveal", "Lock it until midnight on their birthday. They see a countdown until it blooms."],
-            [Download, "Story-ready", "Download a square post or a 9:16 story image in one tap."],
-            [HeartHandshake, "Send one back", "They can react, reply, and make you a bouquet in return."],
+            [Download, "Story-ready", "Download a post, a 9:16 story, or a video or GIF of the whole opening, petals and all."],
+            [HeartHandshake, "React, chat, send one back", "They react and chat with you, then make you a bouquet in return. Every back-and-forth stays in one thread."],
             [Sparkles, "Private by default", "Links are unlisted and hidden from search. Delete any time."],
           ].map(([Icon, t, d]) => {
             const I = Icon as typeof Sparkles;

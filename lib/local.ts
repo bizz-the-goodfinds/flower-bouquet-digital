@@ -61,3 +61,69 @@ export function useMine(): MineEntry[] | null {
 }
 
 export const isMine = (slug: string) => getMine().some((e) => e.slug === slug);
+
+// ---------- Received bouquets & chat (this device) ----------
+
+/** A bouquet someone sent to this device: which link it came from and which chat is ours. */
+export type ReceivedEntry = { slug: string; link: string | null; conversation: string; to: string; from: string; receivedAt: string };
+
+const RECEIVED_KEY = "pp-received-v1";
+const VIEWER_KEY = "pp-viewer-v1";
+const SEEN_KEY = "pp-seen-v1";
+
+const readJson = <T,>(key: string, fallback: T): T => {
+  try {
+    const v = JSON.parse(localStorage.getItem(key) ?? "null");
+    return v ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+/** Random id for this browser, used as the recipient's side of a chat when there's no personal link. */
+export function viewerId() {
+  try {
+    let id = localStorage.getItem(VIEWER_KEY);
+    if (!id || !/^[A-Za-z0-9_-]{16,32}$/.test(id)) {
+      const bytes = crypto.getRandomValues(new Uint8Array(12));
+      id = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      localStorage.setItem(VIEWER_KEY, id);
+    }
+    return id;
+  } catch {
+    return "anonymous-viewer";
+  }
+}
+
+export function getReceived(): ReceivedEntry[] {
+  const list = readJson<ReceivedEntry[]>(RECEIVED_KEY, []);
+  return Array.isArray(list) ? list : [];
+}
+
+export function addReceived(entry: ReceivedEntry) {
+  try {
+    const prev = getReceived().find((e) => e.slug === entry.slug);
+    const next = { ...entry, receivedAt: prev?.receivedAt ?? entry.receivedAt };
+    localStorage.setItem(RECEIVED_KEY, JSON.stringify([next, ...getReceived().filter((e) => e.slug !== entry.slug)].slice(0, 200)));
+  } catch {}
+}
+
+export function removeReceived(slug: string) {
+  try {
+    localStorage.setItem(RECEIVED_KEY, JSON.stringify(getReceived().filter((e) => e.slug !== slug)));
+  } catch {}
+}
+
+/** Last chat message this device has seen, per chat (`<slug>:<conversation>`), for "new" dots. */
+export function getSeen(): Record<string, string> {
+  return readJson<Record<string, string>>(SEEN_KEY, {});
+}
+
+export function markSeen(key: string, at: string) {
+  try {
+    const seen = getSeen();
+    if (seen[key] && seen[key] >= at) return;
+    seen[key] = at;
+    localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+  } catch {}
+}

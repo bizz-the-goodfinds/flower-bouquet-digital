@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CalendarClock, Eye, Hourglass, Loader2, Pencil, RotateCcw, Save, Send } from "lucide-react";
+import { ArrowLeft, CalendarClock, Eye, Hourglass, Pencil, RotateCcw, Save, Send } from "lucide-react";
+import { MiniBloom } from "@/components/ui/bloom-loader";
 import { EnvelopeArt } from "@/components/reveal/envelope";
 import { RecipientView } from "@/components/reveal/recipient-view";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -435,7 +436,7 @@ function ConfirmSend({
         </button>
       </Tooltip>
       <button type="button" className="btn-primary min-h-11 !px-4 text-sm whitespace-nowrap" onClick={onConfirm} disabled={sending} autoFocus>
-        {sending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : editing ? <Save className="size-4" aria-hidden /> : <Send className="size-4" aria-hidden />}
+        {sending ? <MiniBloom /> : editing ? <Save className="size-4" aria-hidden /> : <Send className="size-4" aria-hidden />}
         {sending ? "Wrapping…" : editing ? "Save" : "Send 💐"}
       </button>
     </div>

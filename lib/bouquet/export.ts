@@ -2,7 +2,7 @@
 
 import { BACKGROUNDS, DEFAULTS } from "./catalog";
 import { CANVAS, bouquetSvg, type Design } from "./composition";
-import { site } from "../site";
+import { logoSvg } from "../brand";
 
 export type ExportFormat = "post" | "story";
 
@@ -42,9 +42,9 @@ export async function renderBouquetPng(design: Design, opts: { format: ExportFor
     const mono = cssFont("--font-geist-mono", "ui-monospace, monospace");
     await Promise.all([document.fonts.load(`italic 80px ${display}`), document.fonts.load(`24px ${mono}`)]).catch(() => {});
 
-    const bw = opts.format === "story" ? 1000 : 940;
+    const bw = opts.format === "story" ? 1000 : 860;
     const bh = (bw * CANVAS.h) / CANVAS.w;
-    const top = opts.format === "story" ? 420 : 40;
+    const top = opts.format === "story" ? 400 : 30;
     ctx.drawImage(img, (W - bw) / 2, top, bw, bh);
 
     ctx.fillStyle = inkColor;
@@ -58,12 +58,11 @@ export async function renderBouquetPng(design: Design, opts: { format: ExportFor
       ctx.fillText(truncate(ctx, opts.to || "you", W - 120), W / 2, 350);
     } else if (opts.to) {
       ctx.font = `italic 64px ${display}`;
-      ctx.fillText(truncate(ctx, `for ${opts.to}`, W - 120), W / 2, H - 70);
+      ctx.fillText(truncate(ctx, `for ${opts.to}`, W - 120), W / 2, H - 168);
     }
-    ctx.font = `22px ${mono}`;
-    ctx.globalAlpha = 0.55;
-    ctx.fillText(`made on ${site.wordmark} · ${site.url.replace(/^https?:\/\//, "")}`, W / 2, H - (opts.format === "story" ? 90 : 24));
-    ctx.globalAlpha = 1;
+    const logo = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(logoSvg().replace("<svg ", '<svg width="128" height="128" '))}`);
+    const { drawBrandPill } = await import("./animate");
+    drawBrandPill(ctx, logo, W, H, { display, mono }, opts.format === "story");
   } finally {
     URL.revokeObjectURL(url);
   }

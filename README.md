@@ -12,14 +12,24 @@ Live: https://flower-bouquet-digital.vercel.app
 - Analytics: Microsoft Clarity + Firebase Analytics (GA4) + Vercel Analytics / Speed Insights
 - All flower, wrap and envelope art is procedural SVG (`lib/bouquet/art.ts`, `lib/bouquet/envelope.ts`)
 - Fonts: Playfair Display (headings), Geist (UI); letter fonts Handlee, Playwrite CA Guides, Cutive Mono, Sacramento, Bitcount Single
-- Video/GIF of the opening are rendered on-device (`lib/bouquet/animate.ts`, MediaRecorder + gifenc)
+- Video/GIF of the opening are rendered on-device (`lib/bouquet/animate.ts`, MediaRecorder + gifenc): envelope cover frame, unwrap, bloom, petal rain, card, branded logo pill
+
+## Sharing, chat and threads
+
+- **Link preview is a teaser.** `/b/[slug]/og` renders the sender's own envelope (colour, seal, liner) with "from X" copy, never the bouquet. `?r=<key>` personalises it for a personal link.
+- **Personal links.** One bouquet, many people: `bouquet_links` gives each recipient `/b/<slug>?r=<key>` with their name on the envelope, their own open count and their own chat.
+- **Chat.** `reactions` rows are chat messages (`author` = recipient | sender) grouped by `conversation`: `l:<link key>` or `d:<random device id>` (kept in `localStorage`). Whoever holds the link/device id reads that chat; the sender (edit token or signed-in owner) reads and answers all of them.
+- **Live.** When both sides have a chat open, Supabase Realtime broadcast (`lib/realtime.ts`) delivers "new message" pings, typing and "is here" presence on `chat:<slug>:<conversation>`. Only pings travel; clients refetch from the API. My bouquets listens on `inbox:<slug>` and also polls every 30s. Chats load 30 messages at a time (scroll up for older).
+- **Received.** Opening someone else's bouquet stores it on the device (and in `bouquet_receipts` when signed in), so it shows under My bouquets → Received with its chat.
+- **Threads.** "Send one back" sets `reply_to`; `thread_id` is the first bouquet's id. My bouquets groups sent and received bouquets by thread; the recipient page shows only direct ancestors (never other people's replies).
+- **Sender preview.** My bouquets → Preview replays the recipient view with every chat. It never counts as an open, and `/view` ignores the signed-in owner.
 
 ## Local setup
 
 ```bash
 pnpm install
 cp .env.example .env.local   # fill in values
-node --env-file=.env.local scripts/migrate.mjs   # applies supabase/migrations/*
+node --env-file=.env.local scripts/migrate.mjs   # applies supabase/migrations/* (0004 adds threads, chat, personal links, receipts)
 pnpm dev
 ```
 
@@ -62,8 +72,10 @@ server-side already confirmed (`/api/auth/signup`), so no verification email is 
 app/(site)/          landing, /flowers, /occasions, /guides, /faq, legal, /garden, /account/reset
 app/(app)/create/    builder (header only, full-height)
 app/b/[slug]/        recipient page (noindex) + dynamic Open Graph image
-app/api/             bouquets (create/delete/view/mine), reactions, reports
-lib/bouquet/         art, catalog, composition (layout, SVG render), card schema, store, PNG export
+app/b/[slug]/og/     teaser link-preview image (sealed envelope)
+app/api/             bouquets (create/edit/delete/view/mine/received/receive/links/chat), reactions, reports
+lib/bouquet/         art, catalog, composition (layout, SVG render), card schema, chat types, store, PNG/video/GIF export
+lib/server/          bouquet loading, threads, personal links, chat grouping
 lib/content/         flower meanings, occasions, guides (drives SEO pages + llms.txt)
 lib/seo/             JSON-LD helpers, llms.txt generators
 supabase/migrations/ SQL schema
@@ -71,7 +83,7 @@ supabase/migrations/ SQL schema
 
 ## Abuse protection
 
-Optional Cloudflare Turnstile, honeypot field, per-IP-hash rate limits (12 bouquets / 10 min, 60 / day; 15 reactions / 10 min), a small blocklist for threats and slurs, one report per IP per bouquet, and auto-hide after 3 reports.
+Optional Cloudflare Turnstile, honeypot field, per-IP-hash rate limits (12 bouquets / 10 min, 60 / day; 30 reactions or chat messages / 10 min), a small blocklist for threats and slurs, one report per IP per bouquet, and auto-hide after 3 reports.
 
 ## Quality checks
 
@@ -79,4 +91,4 @@ Optional Cloudflare Turnstile, honeypot field, per-IP-hash rate limits (12 bouqu
 
 ## Analytics events
 
-`preview_opened`, `wrap_selected`, `app_error`, `login`, `bouquet_edited`, `signup_completed`, `builder_opened`, `preset_selected`, `flower_added`, `shuffle_used`, `bouquet_created`, `share_clicked`, `image_downloaded`, `bouquet_viewed`, `bouquet_unwrapped`, `reaction_sent`, `send_back_clicked`. Note text and names carry `data-clarity-mask`. Analytics load on first interaction; in Europe/UK only after opt-in.
+`preview_opened`, `wrap_selected`, `app_error`, `login`, `bouquet_edited`, `signup_completed`, `builder_opened`, `preset_selected`, `flower_added`, `shuffle_used`, `bouquet_created`, `share_clicked`, `image_downloaded`, `bouquet_viewed`, `bouquet_unwrapped`, `reaction_sent`, `sender_reply_sent`, `personal_link_created`, `send_back_clicked`. Note text and names carry `data-clarity-mask`. Analytics load on first interaction; in Europe/UK only after opt-in.

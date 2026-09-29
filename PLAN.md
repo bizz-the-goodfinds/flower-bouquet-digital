@@ -1,6 +1,6 @@
 # Flower Bouquet Digital — Product & Build Plan
 
-Status (2026-09-29): v1 is built. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
+Status (2026-09-30): v1 is built; v1.1 (envelope link previews, chat, threads, received bouquets, personal links, more wraps) is in progress. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
 
 ---
 
@@ -325,7 +325,9 @@ Event taxonomy:
 | `image_downloaded` | format (square, story) |
 | `bouquet_viewed` | is_creator |
 | `bouquet_unwrapped` | time_to_unwrap_ms |
-| `reaction_sent` | emoji |
+| `reaction_sent` | emoji, has_reply, first |
+| `sender_reply_sent` | has_text |
+| `personal_link_created` | count |
 | `send_back_clicked` | — |
 | `signup_completed` | method |
 
@@ -430,7 +432,7 @@ See the checklist in the chat reply / below.
 ## 15. Build status (updated 2026-09-29)
 
 ### Done
-- Builder: 31 flowers/fillers + 4 greenery, 5 wrap shapes (cone, tissue wrap, sleeve, hat box, vase) × 12 papers, 7 ribbons, 7 backgrounds; drag, pinch/rotate, keyboard, undo/redo, shuffle, surprise, occasion presets; picker order Wrap → Wrap colour → Flowers → Fillers & greens → Ribbon → Background; clickable steps; tooltips; fits one screen on every size.
+- Builder: 31 flowers/fillers + 4 greenery, 8 wrap shapes (cone, tissue wrap, sleeve, hat box, vase, layered, basket, mason jar) × 20 papers, 14 ribbons, 14 backgrounds; drag, pinch/rotate, keyboard, undo/redo, shuffle, surprise, occasion presets; picker order Wrap → Wrap colour → Flowers → Fillers & greens → Ribbon → Background; clickable steps; tooltips; fits one screen on every size.
 - Card: 6 templates, 6 letter fonts (Playfair Display, Handlee, Playwrite CA Guides, Cutive Mono, Sacramento, Bitcount Single), 18 stickers, envelope colour/seal/liner, scheduled reveal, link expiry; live bouquet + card preview.
 - Preview before sending: full-screen replay of exactly what the recipient sees, with Keep editing / Replay / Send at the top.
 - Sharing: short link, dynamic OG image per bouquet (and per occasion/flower/guide page), WhatsApp/Telegram/X/SMS/email/native share, QR, PNG post + 9:16 story, MP4/WebM video and GIF of the full opening (envelope → bloom → card).
@@ -441,6 +443,18 @@ See the checklist in the chat reply / below.
 - Analytics: Clarity + Firebase + Vercel, consent (EU/UK opt-in), typed events, masked notes.
 - Error pages (404, bouquet not found, error boundary, global error), privacy policy and terms updated.
 - QA: overflow checks on every page at 9 widths, CTA visibility at 10 viewports, Lighthouse CI in GitHub Actions.
+
+### v1.1 (2026-09-30)
+- Link previews tease instead of spoil: the OG image is the sender's own envelope (from the Write step) with "from X / break the seal" copy; share texts updated to match.
+- Video/GIF: the first frame is the sender's envelope (no more blank/black cover), the petal rain from the recipient page is baked in, and every frame (and PNG) carries a logo + wordmark pill.
+- Loaders: bouquet-themed loader (flowers bloom into a little cone) for route loading and edits, flower spinner in buttons, petal-shimmer skeletons in My bouquets.
+- Received bouquets: opening someone's bouquet adds it to My bouquets → Received (device, or account when signed in).
+- Chat: reactions became a chat between the sender and each recipient, themed like the note cards; the sender replies from their preview.
+- Threads: "send one back" chains share a thread; My bouquets groups them into one connected row; the recipient page shows "Earlier in this thread".
+- Several recipients: personal links per person (their name on the envelope, their own opens and chat).
+- My bouquets cards show a one-line summary ("Sam and 2 others reacted ❤️", new badge) instead of the full reactions; "Preview" replays the bouquet without counting an open.
+- Catalog: 3 new wraps (layered, basket, mason jar) = 8; 8 new papers incl. stripes, hearts, gingham and starry prints = 20; 7 new ribbons = 14; 7 new backgrounds incl. 3 dark = 14.
+- Needs: run migration `0004_threads_chat_links.sql` before deploying (the recipient page reads the new columns).
 
 ### Remaining (needs you or a decision)
 - Vercel: attach `flower-bouquet-digital.vercel.app` to the project, turn off Deployment Protection for Production, set env vars.

@@ -171,3 +171,97 @@ body {
     transform: translateY(12px) scale(0.97);
   }
 }
+
+/* Bouquet loaders (components/ui/bloom-loader.tsx) */
+.pp-load-stem {
+  stroke-dasharray: 1;
+  animation: pp-load-grow 2.4s ease-in-out infinite both;
+}
+@keyframes pp-load-grow {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  22%,
+  86% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 1;
+  }
+}
+.pp-load-head {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pp-load-bloom 2.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite both;
+}
+@keyframes pp-load-bloom {
+  0%,
+  14% {
+    transform: scale(0) rotate(-40deg);
+  }
+  32% {
+    transform: scale(1.12) rotate(0deg);
+  }
+  40%,
+  82% {
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    transform: scale(0) rotate(30deg);
+  }
+}
+.pp-load-label {
+  animation: pp-load-caption 2.4s ease-in-out both;
+}
+@keyframes pp-load-caption {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+.pp-load-bow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pp-load-tie 2.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite both;
+}
+@keyframes pp-load-tie {
+  0%,
+  45% {
+    transform: scale(0);
+  }
+  58%,
+  88% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+  }
+}
+@keyframes pp-load-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+.pp-load-bud {
+  animation: pp-load-breathe 1.6s ease-in-out infinite;
+}
+.pp-shimmer {
+  background: linear-gradient(100deg, var(--color-paper) 30%, #fbe3ea 50%, var(--color-paper) 70%) 0 0 / 250% 100%;
+  animation: pp-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes pp-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}

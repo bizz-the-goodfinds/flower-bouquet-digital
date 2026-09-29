@@ -47,6 +47,12 @@ export async function POST(req: Request) {
 
   const token = newEditToken();
   const ownerId = await currentUserId();
+  // A reply joins the thread of the bouquet it answers.
+  let threadId: string | null = null;
+  if (replyTo) {
+    const { data: parent } = await db.from("bouquets").select("id, thread_id").eq("slug", replyTo).maybeSingle<{ id: string; thread_id: string | null }>();
+    threadId = parent ? (parent.thread_id ?? parent.id) : null;
+  }
   for (let attempt = 0; attempt < 3; attempt++) {
     const slug = slugId();
     const { error } = await db.from("bouquets").insert({
@@ -55,6 +61,7 @@ export async function POST(req: Request) {
       owner_id: ownerId,
       ...bouquetColumns(parsed.data),
       reply_to: replyTo || null,
+      thread_id: threadId,
       ip_hash: hash,
     });
     if (!error) return json({ slug, token }, 201);

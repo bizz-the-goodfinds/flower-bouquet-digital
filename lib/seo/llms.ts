@@ -8,7 +8,7 @@ export function llmsTxt() {
 
 > ${site.definition}
 
-${site.name} lets anyone arrange hand-drawn flowers into a bouquet, add a personal note, and send it as a link that unwraps and blooms on the recipient's phone. It is free, needs no account or app, supports scheduled reveals, image/story downloads, emoji reactions and "send one back" replies.
+${site.name} lets anyone arrange hand-drawn flowers into a bouquet, add a personal note, and send it as a link that unwraps and blooms on the recipient's phone. It is free, needs no account or app, and supports scheduled reveals, a link preview that shows only a sealed envelope (the flowers stay a surprise), image/story/video/GIF downloads, personal links for sending one bouquet to several people, emoji reactions with a private sender–recipient chat, "send one back" replies grouped into threads, and a My bouquets page with sent and received bouquets.
 
 ## Product
 - [Bouquet maker](${absoluteUrl("/create")}): build and send a digital bouquet
