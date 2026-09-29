@@ -48,6 +48,7 @@ export function CardStep() {
       const d = new Date(st.revealAt);
       if (Number.isNaN(d.getTime()) || d.getTime() < Date.now() - 60_000) {
         setError("Pick an open time in the future.");
+        track("form_error", { form: "card", reason: "reveal_in_past" });
         return;
       }
       reveal = d.toISOString();
@@ -99,6 +100,13 @@ export function CardStep() {
         has_reveal_at: Boolean(reveal),
         is_reply: Boolean(st.replyTo),
         font: st.card.style.font,
+        template: st.card.style.template,
+        note_mode: st.card.style.note,
+        envelope_color: st.card.style.envelope.color,
+        sticker_count: st.card.style.stickers.length,
+        expiry: st.expiry,
+        wrap: st.design.wrapper,
+        has_message: Boolean(st.card.message.trim()),
         length_bucket: st.card.message.length < 50 ? "short" : st.card.message.length < 200 ? "medium" : "long",
       });
       st.markSent({ slug: data.slug, token: data.token });
@@ -106,6 +114,7 @@ export function CardStep() {
     } catch (err) {
       setError((err as Error).message);
       setConfirm(null);
+      track("bouquet_send_failed", { editing: Boolean(st.editing), error: (err as Error).message.slice(0, 100) });
     } finally {
       setSending(false);
     }
@@ -147,7 +156,7 @@ export function CardStep() {
             <p className="label mb-2">Need words? Tap one</p>
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
               {ideas.map((m) => (
-                <button type="button" key={m} onClick={() => setCard({ message: m })} className="chip shrink-0 text-left whitespace-nowrap hover:border-ink">
+                <button type="button" key={m} data-track="message_idea_used" data-track-occasion={occasion ?? "none"} onClick={() => setCard({ message: m })} className="chip shrink-0 text-left whitespace-nowrap hover:border-ink">
                   {m.length > 42 ? `${m.slice(0, 40)}…` : m}
                 </button>
               ))}

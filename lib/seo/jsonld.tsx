@@ -97,3 +97,28 @@ export const howToLd = (name: string, description: string, steps: { name: string
   estimatedCost: { "@type": "MonetaryAmount", currency: "USD", value: "0" },
   step: steps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.name, text: s.text })),
 });
+
+/** Hub pages: tells search and answer engines the page is a curated list of these items. */
+export const collectionLd = (c: { name: string; description: string; path: string; items: { name: string; path: string }[] }) => ({
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: c.name,
+  description: c.description,
+  url: absoluteUrl(c.path),
+  isPartOf: { "@id": absoluteUrl("/#website") },
+  mainEntity: {
+    "@type": "ItemList",
+    numberOfItems: c.items.length,
+    itemListElement: c.items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name, url: absoluteUrl(it.path) })),
+  },
+});
+
+export const aboutLd = (path: string) => ({
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  url: absoluteUrl(path),
+  name: `About ${site.name}`,
+  description: site.definition,
+  isPartOf: { "@id": absoluteUrl("/#website") },
+  mainEntity: { "@id": absoluteUrl("/#organization") },
+});

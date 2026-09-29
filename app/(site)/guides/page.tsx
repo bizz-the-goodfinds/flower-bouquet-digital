@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { GUIDES } from "@/lib/content/guides";
+import { JsonLd, collectionLd } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
   title: "Guides – Sending Digital Flowers",
@@ -12,6 +13,14 @@ export const metadata: Metadata = {
 export default function GuidesIndex() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
+      <JsonLd
+        data={collectionLd({
+          name: "Guides",
+          description: metadata.description as string,
+          path: "/guides",
+          items: GUIDES.map((x) => ({ name: x.title, path: `/guides/${x.slug}` })),
+        })}
+      />
       <Breadcrumbs items={[{ name: "Guides", path: "/guides" }]} />
       <h1 className="mt-6 font-display text-5xl sm:text-6xl">Guides</h1>
       <ul className="mt-8 space-y-4">

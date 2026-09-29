@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { TrackOnMount } from "@/components/analytics/listeners";
 import { LogoMark } from "@/components/ui/logo";
 
 export default function NotFound() {
   return (
     <main id="main" className="grid min-h-dvh place-items-center px-4 text-center">
+      <TrackOnMount name="page_not_found" />
       <div>
         <LogoMark className="mx-auto size-16 rotate-12" />
         <h1 className="mt-6 font-display text-6xl">404: no blooms here</h1>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, Copy, Plus, Send, Trash2, Users } from "lucide-react";
 import { MiniBloom } from "@/components/ui/bloom-loader";
-import { track } from "@/lib/analytics/track";
+import { track, withUtm } from "@/lib/analytics/track";
 
 export type PersonalLink = { key: string; name: string; views: number | null; openedAt: string | null };
 
@@ -54,7 +54,10 @@ export function PersonalLinks({
 
   const remove = async (key: string) => {
     const res = await fetch(`/api/bouquets/${slug}/links?key=${key}`, { method: "DELETE", headers }).catch(() => null);
-    if (res?.ok) setLinks(links.filter((l) => l.key !== key));
+    if (res?.ok) {
+      setLinks(links.filter((l) => l.key !== key));
+      track("personal_link_deleted");
+    }
   };
 
   const copy = async (key: string) => {
@@ -68,14 +71,14 @@ export function PersonalLinks({
     const text = `${l.name}, I sealed something for you 💌`;
     if ("share" in navigator) {
       try {
-        await navigator.share({ title: "Something special for you", text, url: url(l.key) });
+        await navigator.share({ title: "Something special for you", text, url: withUtm(url(l.key), "native_share") });
         track("share_clicked", { channel: "personal_native" });
         return;
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
       }
     }
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url(l.key)}`)}`, "_blank", "noopener");
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${withUtm(url(l.key), "whatsapp")}`)}`, "_blank", "noopener");
     track("share_clicked", { channel: "personal_whatsapp" });
   };
 

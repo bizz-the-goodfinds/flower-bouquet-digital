@@ -16,7 +16,7 @@ import { BACKGROUNDS } from "@/lib/bouquet/catalog";
 import { getMine, getReceived, getSeen, removeMine, removeReceived, useMine } from "@/lib/local";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { inboxChannel, useInbox } from "@/lib/realtime";
-import { track } from "@/lib/analytics/track";
+import { track, withUtm } from "@/lib/analytics/track";
 import { DownloadMenu } from "@/components/share/download-menu";
 import { SenderPreview } from "./sender-preview";
 
@@ -99,6 +99,7 @@ export function Garden() {
     if (!claimed.current && data?.signedIn && data.bouquets.some((b) => !b.owned && !b.deleted)) {
       claimed.current = true;
       const claim = await post("/api/bouquets/claim", { items }).catch(() => null);
+      if (claim?.claimed > 0) track("bouquets_claimed", { count: claim.claimed });
       if (claim?.claimed > 0) setRemote(data.bouquets.map((b) => ({ ...b, owned: true })));
     }
   }, []);
@@ -166,6 +167,7 @@ export function Garden() {
     const token = getMine().find((m) => m.slug === b.slug)?.token;
     const res = await fetch(`/api/bouquets/${b.slug}`, { method: "DELETE", headers: token ? { "x-edit-token": token } : {} });
     if (res.ok || res.status === 404) {
+      track("bouquet_deleted");
       removeMine(b.slug);
       setRemote((r) => r?.filter((x) => x.slug !== b.slug) ?? null);
     }
@@ -179,6 +181,7 @@ export function Garden() {
       cancelLabel: "Keep it",
     });
     if (!ok) return;
+    track("received_removed");
     removeReceived(r.slug);
     if (signedIn) await fetch(`/api/bouquets/received?slug=${r.slug}`, { method: "DELETE" }).catch(() => {});
     setReceived((list) => list?.filter((x) => x.slug !== r.slug) ?? null);
@@ -189,7 +192,7 @@ export function Garden() {
     const url = `${window.location.origin}/b/${b.slug}`;
     if ("share" in navigator) {
       try {
-        await navigator.share({ title: "Something special for you 💌", text: b.card.to ? `${b.card.to}, I sealed something special for you 💌 Open it:` : "I sealed something special for you 💌 Open it:", url });
+        await navigator.share({ title: "Something special for you 💌", text: b.card.to ? `${b.card.to}, I sealed something special for you 💌 Open it:` : "I sealed something special for you 💌 Open it:", url: withUtm(url, "native_share") });
         track("share_clicked", { channel: "native", where: "garden" });
         return;
       } catch (err) {
@@ -198,6 +201,7 @@ export function Garden() {
     }
     const slug = b.slug;
     await navigator.clipboard?.writeText(url).catch(() => {});
+    track("share_clicked", { channel: "copy", where: "garden" });
     setCopied(slug);
     setTimeout(() => setCopied((c) => (c === slug ? null : c)), 1600);
   };
@@ -225,7 +229,7 @@ export function Garden() {
 
   const card = (e: Entry) =>
     e.kind === "sent" ? (
-      <SentCard key={e.item.slug} b={e.item} unread={unreadSent(e.item)} copied={copied === e.item.slug} onCopy={() => share(e.item)} onDelete={() => remove(e.item)} onPreview={() => setPreviewing(e.item)} />
+      <SentCard key={e.item.slug} b={e.item} unread={unreadSent(e.item)} copied={copied === e.item.slug} onCopy={() => share(e.item)} onDelete={() => remove(e.item)} onPreview={() => (setPreviewing(e.item), track("sent_preview_opened", { unread: unreadSent(e.item) }))} />
     ) : (
       <ReceivedCard key={e.item.slug} r={e.item} unread={unreadReceived(e.item)} onRemove={() => forget(e.item)} />
     );
@@ -249,6 +253,8 @@ export function Garden() {
             key={id}
             role="tab"
             aria-selected={tab === id}
+            data-track="garden_tab"
+            data-track-tab={id}
             onClick={() => setTab(id)}
             className={`min-h-10 rounded-full px-4 font-medium transition ${tab === id ? "bg-ink text-cream" : "text-ink-soft hover:text-ink"}`}
           >
@@ -607,6 +613,7 @@ function Account({ signedIn, email, count }: { signedIn: boolean; email: string 
           redirectTo: `${window.location.origin}/auth/callback?next=/account/reset`,
         });
         if (err) throw new Error("Couldn't send the reset email. Try again in a minute.");
+        track("password_reset_requested");
         setNotice("If that email has an account, a reset link is on its way. Check your inbox (and spam).");
         setBusy(false);
         return;
@@ -626,6 +633,7 @@ function Account({ signedIn, email, count }: { signedIn: boolean; email: string 
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
+      track("auth_failed", { mode, error: (err as Error).message.slice(0, 100) });
     }
   };
 
@@ -637,12 +645,12 @@ function Account({ signedIn, email, count }: { signedIn: boolean; email: string 
           <span className="hidden text-ink-soft sm:inline">{count ? " · these only live in this browser for now" : " · free and optional"}</span>
         </p>
         {!expanded && (
-          <button className="btn-primary min-h-10 !px-4 !py-1.5 text-sm" onClick={() => setExpanded(true)}>
+          <button className="btn-primary min-h-10 !px-4 !py-1.5 text-sm" data-track="sync_prompt_opened" onClick={() => setExpanded(true)}>
             Sign in
           </button>
         )}
         <Tooltip label="Hide this">
-          <button className="grid size-10 place-items-center rounded-full text-ink-soft hover:bg-ink/5 hover:text-ink" onClick={() => dismiss(true)} aria-label="Hide sync prompt">
+          <button className="grid size-10 place-items-center rounded-full text-ink-soft hover:bg-ink/5 hover:text-ink" data-track="sync_prompt_dismissed" onClick={() => dismiss(true)} aria-label="Hide sync prompt">
             <X className="size-4" aria-hidden />
           </button>
         </Tooltip>
@@ -739,6 +747,8 @@ function Account({ signedIn, email, count }: { signedIn: boolean; email: string 
             {GOOGLE_ENABLED && mode !== "forgot" && (
               <button
                 className="btn-secondary !py-1.5 text-sm"
+                data-track="login_started"
+                data-track-method="google"
                 onClick={() =>
                   supabaseBrowser().auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback?next=/garden` } })
                 }

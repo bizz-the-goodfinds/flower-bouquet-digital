@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, ChevronDown, Clapperboard, Copy, Film, Image as ImageIcon, Mail, QrCode, Share, Smartphone } from "lucide-react";
 import type { Design } from "@/lib/bouquet/composition";
 import type { CardStyle } from "@/lib/bouquet/card";
-import { track } from "@/lib/analytics/track";
+import { track, withUtm } from "@/lib/analytics/track";
 import { MiniBloom } from "@/components/ui/bloom-loader";
 import { PersonalLinks } from "./personal-links";
 import { useExport, type ExportKind } from "./use-export";
@@ -51,10 +51,10 @@ export function SharePanel({
   };
 
   const channels = [
-    { id: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}` },
-    { id: "telegram", label: "Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}` },
-    { id: "x", label: "X", href: `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}` },
-    { id: "sms", label: "Messages", href: `sms:?&body=${encodeURIComponent(`${text} ${url}`)}` },
+    { id: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${text} ${withUtm(url, "whatsapp")}`)}` },
+    { id: "telegram", label: "Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(withUtm(url, "telegram"))}&text=${encodeURIComponent(text)}` },
+    { id: "x", label: "X", href: `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(withUtm(url, "x"))}` },
+    { id: "sms", label: "Messages", href: `sms:?&body=${encodeURIComponent(`${text} ${withUtm(url, "sms")}`)}` },
   ];
 
   return (
@@ -74,7 +74,7 @@ export function SharePanel({
           className="btn-primary w-full !py-3.5 text-base"
           onClick={async () => {
             try {
-              await navigator.share({ title: "Something special for you 💌", text, url });
+              await navigator.share({ title: "Something special for you 💌", text, url: withUtm(url, "native_share") });
               track("share_clicked", { channel: "native" });
             } catch {}
           }}
@@ -101,7 +101,7 @@ export function SharePanel({
             </a>
           ))}
           <a
-            href={`mailto:?subject=${encodeURIComponent(to ? `${to}, something special is waiting for you 💌` : "Something special is waiting for you 💌")}&body=${encodeURIComponent(`${text}\n\n${url}`)}`}
+            href={`mailto:?subject=${encodeURIComponent(to ? `${to}, something special is waiting for you 💌` : "Something special is waiting for you 💌")}&body=${encodeURIComponent(`${text}\n\n${withUtm(url, "email")}`)}`}
             onClick={() => track("share_clicked", { channel: "email" })}
             className="btn-secondary !py-2.5 text-sm"
           >
@@ -141,7 +141,7 @@ export function SharePanel({
           onClick={async () => {
             if (qr) return setQr(null);
             const QR = await import("qrcode");
-            setQr(await QR.toDataURL(url, { margin: 1, width: 480, color: { dark: "#1B1A17", light: "#FFFDF8" } }));
+            setQr(await QR.toDataURL(withUtm(url, "qr"), { margin: 1, width: 480, color: { dark: "#1B1A17", light: "#FFFDF8" } }));
             track("share_clicked", { channel: "qr" });
           }}
         >

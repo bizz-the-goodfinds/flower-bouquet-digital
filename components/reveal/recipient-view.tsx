@@ -87,7 +87,13 @@ export function RecipientView({
     shownAt.current = performance.now();
     if (preview) return;
     const own = isMine(bouquet.slug);
-    track("bouquet_viewed", { is_creator: own });
+    track("bouquet_viewed", {
+      is_creator: own,
+      personal_link: Boolean(link),
+      occasion: bouquet.occasion ?? "none",
+      flower_count: bouquet.design.items.length,
+      source: new URLSearchParams(location.search).get("utm_source") ?? (document.referrer ? new URL(document.referrer).hostname : "direct"),
+    });
     let cancelled = false;
     const t = setTimeout(async () => {
       setMine(own);
@@ -111,7 +117,7 @@ export function RecipientView({
       cancelled = true;
       clearTimeout(t);
     };
-  }, [bouquet.slug, bouquet.to, bouquet.from, preview, link]);
+  }, [bouquet.slug, bouquet.to, bouquet.from, bouquet.occasion, bouquet.design.items.length, preview, link]);
 
   useEffect(() => {
     if (preview) return;
@@ -263,6 +269,7 @@ export function RecipientView({
               onToggle={(next) => {
                 setDock(next);
                 if (next) setUnread(0);
+                if (!preview) track("chat_toggled", { open: next, unread, is_creator: mine || Boolean(sender) });
               }}
               unread={unread}
               label={sender ? "Reactions & chat" : preview ? "Their chat" : mine ? "Your bouquet" : `Chat with ${bouquet.from || "them"}`}
@@ -332,7 +339,7 @@ function Footer({ slug, dark, hideReport }: { slug: string; dark: boolean; hideR
           Flower Bouquet Digital
         </Link>
         {!hideReport && !reported && !reporting && (
-          <button className="ml-2 inline-flex min-h-9 items-center gap-1 underline underline-offset-2" onClick={() => setReporting(true)}>
+          <button className="ml-2 inline-flex min-h-9 items-center gap-1 underline underline-offset-2" data-track="report_opened" onClick={() => setReporting(true)}>
             <Flag className="size-3" aria-hidden /> Report
           </button>
         )}
@@ -344,6 +351,7 @@ function Footer({ slug, dark, hideReport }: { slug: string; dark: boolean; hideR
           onSubmit={async (e) => {
             e.preventDefault();
             const reason = new FormData(e.currentTarget).get("reason") as string;
+            track("bouquet_reported", { reason });
             await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug, reason }) }).catch(() => {});
             setReported(true);
           }}

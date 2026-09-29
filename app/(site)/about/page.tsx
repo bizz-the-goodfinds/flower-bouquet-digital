@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
+import { JsonLd, aboutLd } from "@/lib/seo/jsonld";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
+      <JsonLd data={aboutLd("/about")} />
       <Breadcrumbs items={[{ name: "About", path: "/about" }]} />
       <h1 className="mt-6 font-display text-5xl sm:text-6xl">About {site.name}</h1>
       <div className="prose-flower mt-6">

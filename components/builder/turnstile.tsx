@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { track } from "@/lib/analytics/track";
 
 type TurnstileApi = {
   render: (el: HTMLElement, opts: Record<string, unknown>) => string;
@@ -47,7 +48,10 @@ export function Turnstile({ onToken }: { onToken: (token: string | null) => void
           appearance: "interaction-only",
           callback: (t: string) => cb.current(t),
           "expired-callback": () => cb.current(null),
-          "error-callback": () => cb.current(null),
+          "error-callback": () => {
+            track("captcha_failed");
+            cb.current(null);
+          },
         });
       })
       .catch(() => cb.current(null));

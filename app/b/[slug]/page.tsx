@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TrackOnMount } from "@/components/analytics/listeners";
 import { Countdown } from "@/components/reveal/countdown";
 import { Envelope } from "@/components/reveal/envelope";
 import { RecipientView } from "@/components/reveal/recipient-view";
@@ -47,6 +48,7 @@ export default async function BouquetPage({ params, searchParams }: PageProps<"/
       <main id="main">
         {state.status === "locked" ? (
           <>
+            <TrackOnMount name="bouquet_locked_viewed" params={{ personal_link: Boolean(link) }} />
             <header className="absolute top-0 left-0 z-20 p-3 sm:p-5">
               <Link href="/" aria-label="Flower Bouquet Digital home" className="flex items-center rounded-full bg-paper/80 py-1 pr-3 pl-2 backdrop-blur-sm">
                 <Logo compact />

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { StaticBouquet, presetDesign } from "@/components/bouquet/static-bouquet";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { OCCASIONS } from "@/lib/content/occasions";
+import { JsonLd, collectionLd } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
   title: "Digital Bouquets for Every Occasion",
@@ -14,6 +15,14 @@ export const metadata: Metadata = {
 export default function OccasionsIndex() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <JsonLd
+        data={collectionLd({
+          name: "Occasions",
+          description: metadata.description as string,
+          path: "/occasions",
+          items: OCCASIONS.map((x) => ({ name: x.name, path: `/occasions/${x.slug}` })),
+        })}
+      />
       <Breadcrumbs items={[{ name: "Occasions", path: "/occasions" }]} />
       <h1 className="mt-6 font-display text-5xl leading-none sm:text-6xl">Bouquets for every moment</h1>
       <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink/80">

@@ -291,7 +291,7 @@ function Sent() {
           <Link href="/garden" className="btn-ghost border border-line">
             <Eye className="size-4" aria-hidden /> Preview in My bouquets
           </Link>
-          <button type="button" className="btn-ghost border border-line" onClick={() => useBuilder.getState().reset()}>
+          <button type="button" className="btn-ghost border border-line" data-track="make_another_clicked" onClick={() => useBuilder.getState().reset()}>
             <RotateCcw className="size-4" aria-hidden /> Make another
           </button>
         </div>

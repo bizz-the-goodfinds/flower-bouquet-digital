@@ -16,10 +16,10 @@ ${site.name} lets anyone arrange hand-drawn flowers into a bouquet, add a person
 - [About](${absoluteUrl("/about")})
 
 ## Occasions
-${OCCASIONS.map((o) => `- [${o.name}](${absoluteUrl(`/occasions/${o.slug}`)}): ${o.answer.split(". ")[0]}.`).join("\n")}
+${OCCASIONS.map((o) => `- [${o.name}](${absoluteUrl(`/occasions/${o.slug}`)}): ${o.answer.split(". ")[0].replace(/\.+$/, "")}.`).join("\n")}
 
 ## Flower meanings
-${FLOWER_FAMILIES.map((f) => `- [${f.name}](${absoluteUrl(`/flowers/${f.slug}`)}): ${f.answer.split(". ")[0]}.`).join("\n")}
+${FLOWER_FAMILIES.map((f) => `- [${f.name}](${absoluteUrl(`/flowers/${f.slug}`)}): ${f.answer.split(". ")[0].replace(/\.+$/, "")}.`).join("\n")}
 
 ## Guides
 ${GUIDES.map((g) => `- [${g.title}](${absoluteUrl(`/guides/${g.slug}`)})`).join("\n")}

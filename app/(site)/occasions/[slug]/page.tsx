@@ -58,7 +58,7 @@ export default async function OccasionPage({ params }: PageProps<"/occasions/[sl
                     <StemThumb slug={fam.stems[0]} className="size-14 shrink-0" />
                     <span>
                       <span className="block font-display text-xl">{fam.name}</span>
-                      <span className="block text-sm text-ink-soft">{fam.answer.split(".")[0].slice(0, 90)}</span>
+                      <span className="line-clamp-2 text-sm text-ink-soft">{fam.answer.split(".")[0]}.</span>
                     </span>
                   </Link>
                 </li>

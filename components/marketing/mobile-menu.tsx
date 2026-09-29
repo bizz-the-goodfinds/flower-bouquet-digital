@@ -23,7 +23,7 @@ export function MobileMenu() {
   }, [pathname]);
 
   return (
-    <details ref={ref} className="group relative md:hidden">
+    <details ref={ref} data-track="mobile_menu_opened" className="group relative md:hidden">
       <summary
         aria-label="Menu"
         className="grid size-11 cursor-pointer list-none place-items-center rounded-full hover:bg-ink/5 [&::-webkit-details-marker]:hidden"
