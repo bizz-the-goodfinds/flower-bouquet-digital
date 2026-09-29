@@ -17,15 +17,20 @@ export async function GET(req: Request, ctx: RouteContext<"/api/bouquets/[slug]/
 
   if (c) {
     if (!SLUG_PATTERN.test(slug) || !CONVERSATION_RE.test(c)) return json({ error: "Bad request" }, 400);
-    const { data: b } = await db.from("bouquets").select("id").eq("slug", slug).is("deleted_at", null).maybeSingle<{ id: string }>();
-    if (!b || !(await conversationAllowed(b.id, c))) return json({ error: "Not found" }, 404);
     // Newest page first (?before=<iso> for older pages), returned oldest→newest for display.
     const before = url.searchParams.get("before");
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit")) || PAGE));
-    let q = db.from("reactions").select(MESSAGE_COLS).eq("bouquet_id", b.id).eq("conversation", c);
+    // This is polled, so everything is keyed by slug through joins and runs in one round trip.
+    let q = db.from("reactions").select(`${MESSAGE_COLS}, bouquets!inner(slug)`).eq("bouquets.slug", slug).eq("conversation", c);
     if (before && !Number.isNaN(Date.parse(before))) q = q.lt("created_at", before);
-    const { data } = await q.order("created_at", { ascending: false }).limit(limit + 1).returns<Msg[]>();
-    const rows = data ?? [];
+    const [b, link, msgs] = await Promise.all([
+      db.from("bouquets").select("id").eq("slug", slug).is("deleted_at", null).maybeSingle<{ id: string }>(),
+      // Personal-link conversations must still have their link; device ones are free-form.
+      c.startsWith("l:") ? db.from("bouquet_links").select("key, bouquets!inner(slug)").eq("bouquets.slug", slug).eq("key", c.slice(2)).maybeSingle() : null,
+      q.order("created_at", { ascending: false }).limit(limit + 1).returns<Msg[]>(),
+    ]);
+    if (!b.data || (link && !link.data)) return json({ error: "Not found" }, 404);
+    const rows = msgs.data ?? [];
     return json({ messages: rows.slice(0, limit).reverse().map(toMessage), hasMore: rows.length > limit });
   }
 

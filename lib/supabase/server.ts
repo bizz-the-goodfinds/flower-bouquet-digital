@@ -19,12 +19,16 @@ export async function supabaseServer() {
   });
 }
 
-/** The signed-in user's id, or null. Never throws. */
+/**
+ * The signed-in user's id, or null. Never throws.
+ * getClaims() verifies the session JWT locally against the project's cached signing keys,
+ * so this skips the round trip to the Auth server that getUser() makes on every request.
+ */
 export async function currentUserId() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) return null;
   try {
-    const { data } = await (await supabaseServer()).auth.getUser();
-    return data.user?.id ?? null;
+    const { data } = await (await supabaseServer()).auth.getClaims();
+    return data?.claims.sub ?? null;
   } catch {
     return null;
   }

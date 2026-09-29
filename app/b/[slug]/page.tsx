@@ -41,7 +41,8 @@ export default async function BouquetPage({ params, searchParams }: PageProps<"/
   const { slug } = await params;
   const state = await getBouquet(slug);
   if (state.status === "missing") notFound();
-  const link = await getLink(state.meta.id, one((await searchParams).r));
+  // Both only need the bouquet row, so fetch them together.
+  const [link, thread] = await Promise.all([getLink(state.meta.id, one((await searchParams).r)), state.status === "locked" ? [] : getAncestors(state.meta)]);
 
   return (
     <div className={cardFontVars} data-card-fonts>
@@ -62,7 +63,7 @@ export default async function BouquetPage({ params, searchParams }: PageProps<"/
           <RecipientView
             bouquet={link ? { ...state.bouquet, to: link.name } : state.bouquet}
             link={link?.key ?? null}
-            thread={await getAncestors(state.meta)}
+            thread={thread}
           />
         )}
       </main>

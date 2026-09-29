@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ArrowDownLeft, ArrowUpRight, Check, Copy, Eye, Flower2, MessageCircle, Pencil, Share, Trash2, Undo2, Users, X } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -18,7 +19,8 @@ import { supabaseBrowser } from "@/lib/supabase/browser";
 import { inboxChannel, useInbox } from "@/lib/realtime";
 import { track, withUtm } from "@/lib/analytics/track";
 import { DownloadMenu } from "@/components/share/download-menu";
-import { SenderPreview } from "./sender-preview";
+// Only needed once someone taps Preview: keeps the reveal, chat and export code out of the first load.
+const SenderPreview = dynamic(() => import("./sender-preview").then((m) => m.SenderPreview), { ssr: false });
 
 type Sent = {
   slug: string;
@@ -135,7 +137,7 @@ export function Garden() {
   useEffect(() => {
     if (!signedIn) return;
     supabaseBrowser()
-      .auth.getUser()
+      .then((sb) => sb.auth.getUser())
       .then(({ data }) => setEmail(data.user?.email ?? null));
     if (new URLSearchParams(location.search).has("signedin")) track("signup_completed", { method: "magic_link_or_oauth" });
   }, [signedIn]);
@@ -607,7 +609,7 @@ function Account({ signedIn, email, count }: { signedIn: boolean; email: string 
     setError(null);
     setNotice(null);
     try {
-      const sb = supabaseBrowser();
+      const sb = await supabaseBrowser();
       if (mode === "forgot") {
         const { error: err } = await sb.auth.resetPasswordForEmail(form.email.trim(), {
           redirectTo: `${window.location.origin}/auth/callback?next=/account/reset`,
@@ -750,7 +752,7 @@ function Account({ signedIn, email, count }: { signedIn: boolean; email: string 
                 data-track="login_started"
                 data-track-method="google"
                 onClick={() =>
-                  supabaseBrowser().auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback?next=/garden` } })
+                  supabaseBrowser().then((sb) => sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback?next=/garden` } }))
                 }
               >
                 Continue with Google

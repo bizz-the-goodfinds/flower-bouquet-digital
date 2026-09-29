@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Pin, PinOff, X } from "lucide-react";
 import { NoteCard } from "@/components/bouquet/note-card";
-import { CARD_TEMPLATES, type CardStyle } from "@/lib/bouquet/card";
+import { CARD_TEMPLATES, TAG_HANG, type CardStyle } from "@/lib/bouquet/card";
 import { CANVAS, tieOf } from "@/lib/bouquet/composition";
 
 export type Note = { to: string; from: string; message: string; style: CardStyle };
@@ -13,36 +13,48 @@ export type Note = { to: string; from: string; message: string; style: CardStyle
 const LAYOUT_ID = "note-card";
 
 /**
- * The note as a real florist card: a small card on a pick, tucked into the bouquet just above the wrap.
- * Render inside the box that holds the bouquet (same 4:5 frame) so it sits on each wrap's tie point.
+ * The note as a gift tag hanging off the ribbon on a string, clear of the flowers.
+ * Render inside the box that holds the bouquet (same 4:5 frame) so it hangs from each wrap's bow.
  */
 export function NoteTag({ note, wrapper, onOpen, hint, delay = 1.5 }: { note: Note; wrapper: string; onOpen: () => void; hint: boolean; delay?: number }) {
   const reduce = useReducedMotion();
   const tie = tieOf(wrapper);
   const t = CARD_TEMPLATES[note.style.template] ?? CARD_TEMPLATES.paper;
-  const left = ((tie.x + 40) / CANVAS.w) * 100;
-  const top = ((tie.y - 360) / CANVAS.h) * 100;
+  const left = (tie.x / CANVAS.w) * 100;
+  const top = (tie.y / CANVAS.h) * 100;
+  // The eyelet after the card's swing, in % of the tag width (the string's end).
+  const a = (TAG_HANG.rot * Math.PI) / 180;
+  const e = TAG_HANG.eyelet * 100;
+  const end = { x: TAG_HANG.dx * 100 + e * Math.cos(a) - e * Math.sin(a), y: TAG_HANG.dy * 100 + e * Math.sin(a) + e * Math.cos(a) };
+  const string = `M0 0 Q${(end.x * 0.3).toFixed(1)} ${(end.y * 0.95).toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
   return (
     <motion.div
       className="absolute z-10 w-[26%] max-w-40 min-w-24"
       style={{ left: `${left}%`, top: `${top}%` }}
-      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.6 }}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, y: -24, scale: 0.6 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: reduce ? 0.2 : delay, type: "spring", stiffness: 160, damping: 14 }}
     >
-      {/* the pick it's stuck on, disappearing into the wrap */}
-      <span aria-hidden className="absolute top-[80%] left-[30%] h-[75%] w-[5px] origin-top rotate-[18deg] rounded-full border-[1.5px] border-ink bg-[#6E9C63]" />
+      {/* the string, tied at the bow's knot (this box's top-left) */}
+      <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute top-0 left-0 aspect-square w-full overflow-visible">
+        {/* twine: light core with an ink edge so it reads on dark and pale wraps alike */}
+        <g fill="none" strokeLinecap="round">
+          <path d={string} stroke="var(--color-ink)" strokeWidth="3.4" />
+          <path d={string} stroke="#F3E3C3" strokeWidth="1.6" />
+        </g>
+      </svg>
       <motion.button
         type="button"
         layoutId={LAYOUT_ID}
         onClick={onOpen}
         aria-label={`Read the note${note.from ? ` from ${note.from}` : ""}`}
-        className="group relative block w-full rotate-[8deg] cursor-pointer rounded-lg border-[1.5px] border-ink p-2 text-left shadow-[3px_3px_0_0_var(--color-ink)] sm:p-2.5"
-        style={{ background: t.bg, color: t.ink }}
-        whileHover={reduce ? undefined : { scale: 1.06, y: -4, rotate: 4 }}
+        className="group relative block w-full cursor-pointer rounded-lg border-[1.5px] border-ink p-2 pl-[12%] text-left shadow-[3px_3px_0_0_var(--color-ink)] sm:p-2.5 sm:pl-[12%]"
+        style={{ background: t.bg, color: t.ink, marginLeft: `${TAG_HANG.dx * 100}%`, marginTop: `${TAG_HANG.dy * 100}%`, transformOrigin: "0 0", rotate: TAG_HANG.rot }}
+        whileHover={reduce ? undefined : { rotate: TAG_HANG.rot - 4, scale: 1.04 }}
         whileTap={reduce ? undefined : { scale: 0.96 }}
       >
-        <span aria-hidden className="absolute -top-1.5 left-1/2 h-3 w-10 -translate-x-1/2 -rotate-3 rounded-sm bg-butter/80" />
+        {/* eyelet the string goes through; margin-top % is of the width, like its left */}
+        <span aria-hidden className="absolute top-0 left-[5%] mt-[5%] size-2 -translate-1/2 rounded-full border-[1.5px] border-ink bg-cream" />
         <span className="block truncate font-mono text-[9px] tracking-[0.12em] uppercase opacity-70 sm:text-[10px]" data-clarity-mask="true">
           {note.to ? `for ${note.to}` : "for you"}
         </span>

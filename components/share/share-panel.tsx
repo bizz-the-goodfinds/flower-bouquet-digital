@@ -58,12 +58,12 @@ export function SharePanel({
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-2xl border-[1.5px] border-ink bg-paper p-1.5 pl-4">
+    <div className="min-w-0 space-y-4">
+      <div className="flex min-w-0 items-center gap-2 rounded-2xl border-[1.5px] border-ink bg-paper p-1.5 pl-4">
         <span className="min-w-0 flex-1 truncate font-mono text-sm" title={url}>
           {url.replace(/^https?:\/\//, "")}
         </span>
-        <button onClick={copy} className="btn-primary !px-4 !py-2 text-sm" aria-live="polite">
+        <button onClick={copy} className="btn-primary shrink-0 !px-4 !py-2 text-sm" aria-live="polite">
           {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
           {copied ? "Copied" : "Copy"}
         </button>

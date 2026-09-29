@@ -27,7 +27,7 @@ export function ResetPassword() {
       onSubmit={async (e) => {
         e.preventDefault();
         setState("saving");
-        const { error: err } = await supabaseBrowser().auth.updateUser({ password });
+        const { error: err } = await (await supabaseBrowser()).auth.updateUser({ password });
         if (err) {
           setError(/session|auth/i.test(err.message) ? "This reset link has expired. Request a new one from My bouquets." : err.message);
           setState("error");

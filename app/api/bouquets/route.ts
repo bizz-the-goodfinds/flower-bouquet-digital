@@ -37,22 +37,20 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const hash = ipHash(req);
   const since = (ms: number) => new Date(Date.now() - ms).toISOString();
-  const [recent, daily] = await Promise.all([
+  // Rate limits, the owner and (for a reply) the thread it joins, all at once.
+  const [recent, daily, ownerId, parent] = await Promise.all([
     db.from("bouquets").select("id", { count: "exact", head: true }).eq("ip_hash", hash).gte("created_at", since(10 * 60 * 1000)),
     db.from("bouquets").select("id", { count: "exact", head: true }).eq("ip_hash", hash).gte("created_at", since(24 * 3600 * 1000)),
+    currentUserId(),
+    replyTo ? db.from("bouquets").select("id, thread_id").eq("slug", replyTo).maybeSingle<{ id: string; thread_id: string | null }>() : null,
   ]);
   if ((recent.count ?? 0) >= LIMIT_10_MIN || (daily.count ?? 0) >= LIMIT_DAY) {
     return json({ error: "Whoa, that's a lot of flowers. Take a breather and try again in a few minutes." }, 429);
   }
 
   const token = newEditToken();
-  const ownerId = await currentUserId();
   // A reply joins the thread of the bouquet it answers.
-  let threadId: string | null = null;
-  if (replyTo) {
-    const { data: parent } = await db.from("bouquets").select("id, thread_id").eq("slug", replyTo).maybeSingle<{ id: string; thread_id: string | null }>();
-    threadId = parent ? (parent.thread_id ?? parent.id) : null;
-  }
+  const threadId = parent?.data ? (parent.data.thread_id ?? parent.data.id) : null;
   for (let attempt = 0; attempt < 3; attempt++) {
     const slug = slugId();
     const { error } = await db.from("bouquets").insert({

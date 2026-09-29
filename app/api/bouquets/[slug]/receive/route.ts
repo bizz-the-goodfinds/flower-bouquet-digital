@@ -27,6 +27,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/bouquets/[slug]
     // A personal link is the more specific conversation, so it replaces a device one; otherwise keep the first.
     ignoreDuplicates: !conversation.startsWith("l:"),
   });
+  if (conversation.startsWith("l:")) return json({ conversation, signedIn: true });
+  // A device conversation may have been ignored in favour of the one already stored: hand that one back.
   const { data } = await db.from("bouquet_receipts").select("conversation").eq("user_id", uid).eq("bouquet_id", b.id).maybeSingle<{ conversation: string }>();
   return json({ conversation: data?.conversation ?? conversation, signedIn: true });
 }

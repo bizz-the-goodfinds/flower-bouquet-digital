@@ -25,22 +25,31 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
 
   const wanted = new Map(parsed.data.items.map((i) => [i.slug, { conversation: i.conversation, link: i.link ?? null }]));
-  if (uid) {
-    const { data } = await db
-      .from("bouquet_receipts")
-      .select("conversation, link_key, created_at, bouquets(slug)")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: false })
-      .limit(200)
-      .returns<{ conversation: string; link_key: string | null; bouquets: { slug: string } | null }[]>();
-    for (const r of data ?? []) if (r.bouquets) wanted.set(r.bouquets.slug, { conversation: r.conversation, link: r.link_key });
-  }
-  if (!wanted.size) return json({ bouquets: [], signedIn: Boolean(uid) });
+  // This device's list and (signed in) the account's receipts, each with its bouquet rows, in one round trip.
+  const [device, receipts] = await Promise.all([
+    wanted.size ? db.from("bouquets").select(COLS).in("slug", [...wanted.keys()]).returns<Full[]>() : { data: [] as Full[], error: null },
+    uid
+      ? db
+          .from("bouquet_receipts")
+          .select(`conversation, link_key, bouquets(${COLS})`)
+          .eq("user_id", uid)
+          .order("created_at", { ascending: false })
+          .limit(200)
+          .returns<{ conversation: string; link_key: string | null; bouquets: Full | null }[]>()
+      : { data: [], error: null },
+  ]);
+  if (device.error) return json({ error: "Couldn't load" }, 500);
+  const bySlug = new Map((device.data ?? []).map((r) => [r.slug, r]));
+  for (const r of receipts.data ?? [])
+    if (r.bouquets) {
+      wanted.set(r.bouquets.slug, { conversation: r.conversation, link: r.link_key });
+      bySlug.set(r.bouquets.slug, r.bouquets);
+    }
+  if (!bySlug.size) return json({ bouquets: [], signedIn: Boolean(uid) });
+  const rows = [...bySlug.values()];
 
-  const { data: rows, error } = await db.from("bouquets").select(COLS).in("slug", [...wanted.keys()]).returns<Full[]>();
-  if (error) return json({ error: "Couldn't load" }, 500);
   const now = new Date();
-  const live = (rows ?? []).filter((r) => !r.deleted_at && !r.is_flagged && !(r.expires_at && new Date(r.expires_at) < now) && !(uid && r.owner_id === uid));
+  const live = rows.filter((r) => !r.deleted_at && !r.is_flagged && !(r.expires_at && new Date(r.expires_at) < now) && !(uid && r.owner_id === uid));
 
   const [msgs, links] = await Promise.all([
     live.length ? db.from("reactions").select(`${MESSAGE_COLS}, bouquet_id`).in("bouquet_id", live.map((r) => r.id)).not("conversation", "is", null).returns<(Msg & { bouquet_id: string })[]>() : null,
