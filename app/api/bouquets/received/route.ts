@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { currentUserId } from "@/lib/supabase/server";
 import { normalizeDesign } from "@/lib/bouquet/composition";
 import { normalizeEnvelope } from "@/lib/bouquet/envelope";
+import { normalizeCardFont, normalizeStickers } from "@/lib/bouquet/card";
 import { CONVERSATION_RE, type Row } from "@/lib/server/bouquets";
 import { MESSAGE_COLS, toMessage, type Msg } from "@/lib/server/chat";
 import { json } from "@/lib/server/security";
@@ -14,7 +15,7 @@ const bodySchema = z.object({
 });
 
 type Full = Row & { id: string; owner_id: string | null };
-const COLS = "id, slug, owner_id, thread_id, reply_to, composition, wrapper, background, card_style, recipient_name, sender_name, reveal_at, expires_at, deleted_at, is_flagged, created_at";
+const COLS = "id, slug, owner_id, thread_id, reply_to, composition, wrapper, background, card_style, recipient_name, sender_name, message, reveal_at, expires_at, deleted_at, is_flagged, created_at";
 
 /** Bouquets the caller received: opened on this device, plus (signed in) every device. Locked ones hide their flowers. */
 export async function POST(req: Request) {
@@ -67,6 +68,14 @@ export async function POST(req: Request) {
         envelope: normalizeEnvelope(r.card_style.envelope),
         design: locked ? null : normalizeDesign({ items: r.composition.items, wrapper: r.wrapper, paper: r.card_style.paper, background: r.background, ribbon: r.card_style.ribbon ?? "cherry" }),
         chat: { count: chat.length, last: last ? toMessage(last) : null },
+        // Note + card look for downloads (image/video/GIF). Hidden while the bouquet is still locked.
+        message: locked ? "" : (r.message ?? ""),
+        style: {
+          template: r.card_style.template ?? "paper",
+          font: normalizeCardFont(r.card_style.font),
+          stickers: normalizeStickers(r.card_style.stickers),
+          envelope: normalizeEnvelope(r.card_style.envelope),
+        },
       };
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));

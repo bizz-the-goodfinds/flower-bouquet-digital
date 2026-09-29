@@ -17,6 +17,7 @@ import { getMine, getReceived, getSeen, removeMine, removeReceived, useMine } fr
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { inboxChannel, useInbox } from "@/lib/realtime";
 import { track } from "@/lib/analytics/track";
+import { DownloadMenu } from "@/components/share/download-menu";
 import { SenderPreview } from "./sender-preview";
 
 type Sent = {
@@ -50,6 +51,8 @@ type Received = {
   envelope: EnvelopeLook;
   design: Design | null;
   chat: { count: number; last: ChatMessage | null };
+  message: string;
+  style: CardStyle;
 };
 
 type Entry = { kind: "sent"; at: string; thread: string; item: Sent } | { kind: "received"; at: string; thread: string; item: Received };
@@ -394,8 +397,8 @@ function ActivityRow({ lead, title, sub, action, badge, onClick, href }: { lead:
   );
 }
 
-const cardCls = "flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper";
-const footCls = "mt-auto flex flex-wrap items-center gap-1 border-t border-line px-3 py-2";
+const cardCls = "flex h-full min-w-0 flex-col rounded-[var(--radius-card)] border border-line bg-paper";
+const footCls = "relative mt-auto flex flex-wrap items-center gap-1 border-t border-line px-3 py-2";
 const actCls = "btn-ghost min-h-10 !px-3 !py-1.5 text-sm";
 
 function SentCard({ b, unread, copied, onCopy, onDelete, onPreview }: { b: Sent; unread: number; copied: boolean; onCopy: () => void; onDelete: () => void; onPreview: () => void }) {
@@ -474,6 +477,7 @@ function SentCard({ b, unread, copied, onCopy, onDelete, onPreview }: { b: Sent;
           {copied ? <Check className="size-4" aria-hidden /> : canShare ? <Share className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
           {copied ? "Copied" : canShare ? "Share" : "Copy"}
         </button>
+        <DownloadMenu src={{ design: b.design, to: b.card.to, from: b.card.from, message: b.card.message, style: b.card.style }} where="sender" className={actCls} />
         <span className="flex-1" />
         <Tooltip label="Delete">
           <button className="btn-ghost grid size-10 place-items-center !p-0 text-petal-deep" onClick={onDelete} aria-label={`Delete bouquet for ${b.card.to || "someone"}`}>
@@ -531,6 +535,7 @@ function ReceivedCard({ r, unread, onRemove }: { r: Received; unread: boolean; o
         <Link href={`/create?replyTo=${r.slug}${r.from ? `&to=${encodeURIComponent(r.from)}` : ""}`} onClick={() => track("send_back_clicked", { where: "garden" })} className={actCls}>
           <Flower2 className="size-4" aria-hidden /> Send one back
         </Link>
+        {r.design && <DownloadMenu src={{ design: r.design, to: r.to, from: r.from, message: r.message, style: r.style }} where="recipient" className={actCls} />}
         <span className="flex-1" />
         <Tooltip label="Remove from list">
           <button className="btn-ghost grid size-10 place-items-center !p-0 text-ink-soft" onClick={onRemove} aria-label={`Remove bouquet from ${r.from || "someone"}`}>
