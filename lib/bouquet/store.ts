@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { DEFAULTS } from "./catalog";
-import { normalizeCardFont, normalizeStickers, type CardStyle, type Expiry } from "./card";
+import { normalizeCardFont, normalizeNoteMode, normalizeStickers, type CardStyle, type Expiry } from "./card";
 import { DEFAULT_ENVELOPE, normalizeEnvelope } from "./envelope";
 import { MAX_STEMS, arrange, normalizeDesign, spawnPosition, type Design, type Item } from "./composition";
 
@@ -46,7 +46,7 @@ type State = {
 };
 
 export const emptyDesign = (): Design => ({ items: [], ...DEFAULTS });
-const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "playfair", stickers: [], envelope: { ...DEFAULT_ENVELOPE } } });
+const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "playfair", stickers: [], envelope: { ...DEFAULT_ENVELOPE }, note: "tucked" } });
 
 const HISTORY = 60;
 
@@ -141,6 +141,7 @@ export function readDraft(): Pick<State, "design" | "card" | "occasion" | "reply
     d.card.style.stickers = normalizeStickers(d.card.style.stickers);
     d.card.style.font = normalizeCardFont(d.card.style.font);
     d.card.style.envelope = normalizeEnvelope(d.card.style.envelope);
+    d.card.style.note = normalizeNoteMode(d.card.style.note);
     d.design = normalizeDesign(d.design);
     return d;
   } catch {

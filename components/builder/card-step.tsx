@@ -10,7 +10,7 @@ import { ENVELOPE_COLORS, LINERS, SEALS, linerSwatchSvg, sealSvg, type EnvelopeC
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { NoteCard } from "@/components/bouquet/note-card";
 import { BACKGROUNDS } from "@/lib/bouquet/catalog";
-import { CARD_FONTS, CARD_TEMPLATES, EXPIRY_OPTIONS, MAX_STICKERS, STICKERS, type CardFont, type CardTemplate, type Expiry } from "@/lib/bouquet/card";
+import { CARD_FONTS, CARD_TEMPLATES, EXPIRY_OPTIONS, MAX_STICKERS, NOTE_MODES, STICKERS, type CardFont, type CardTemplate, type Expiry, type NoteMode } from "@/lib/bouquet/card";
 import { clearDraft, useBuilder } from "@/lib/bouquet/store";
 import { OCCASION_BY_SLUG } from "@/lib/content/occasions";
 import { addMine } from "@/lib/local";
@@ -280,6 +280,34 @@ export function CardStep() {
               </div>
             </div>
           </div>
+        </fieldset>
+
+        <fieldset>
+          <legend className="label mb-2">How the note arrives</legend>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="How the note arrives">
+            {(Object.keys(NOTE_MODES) as NoteMode[]).map((k) => {
+              const on = card.style.note === k;
+              return (
+                <button
+                  type="button"
+                  key={k}
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setCard({ style: { ...card.style, note: k } })}
+                  className={`flex items-start gap-2.5 rounded-2xl border-[1.5px] p-3 text-left transition ${on ? "border-ink bg-paper shadow-[2px_2px_0_0_var(--color-ink)]" : "border-line bg-paper/60 hover:border-ink/40"}`}
+                >
+                  <span aria-hidden className="text-xl leading-none">
+                    {k === "tucked" ? "💌" : "📌"}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">{NOTE_MODES[k].name}</span>
+                    <span className="block text-xs text-ink-soft">{NOTE_MODES[k].hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-xs text-ink-soft">They can switch it on their side too. Videos and GIFs follow your choice.</p>
         </fieldset>
 
         <fieldset>

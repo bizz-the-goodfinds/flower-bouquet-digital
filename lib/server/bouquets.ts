@@ -5,7 +5,7 @@ import { currentUserId } from "@/lib/supabase/server";
 import { tokenMatches } from "@/lib/server/security";
 import { normalizeDesign, type Design, type Item } from "@/lib/bouquet/composition";
 import { normalizeEnvelope, type EnvelopeLook } from "@/lib/bouquet/envelope";
-import { EXPIRY_OPTIONS, normalizeCardFont, normalizeStickers, type CardStyle, type CreateBouquetInput } from "@/lib/bouquet/card";
+import { EXPIRY_OPTIONS, normalizeCardFont, normalizeNoteMode, normalizeStickers, type CardStyle, type CreateBouquetInput } from "@/lib/bouquet/card";
 
 export type PublicBouquet = {
   slug: string;
@@ -41,7 +41,7 @@ export type Row = {
   composition: { items: Item[] };
   wrapper: string;
   background: string;
-  card_style: { template?: string; font?: string; ribbon?: string; paper?: string; stickers?: string[]; envelope?: unknown };
+  card_style: { template?: string; font?: string; ribbon?: string; paper?: string; stickers?: string[]; envelope?: unknown; note?: string };
   recipient_name: string | null;
   sender_name: string | null;
   message: string | null;
@@ -92,6 +92,7 @@ export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
         font: normalizeCardFont(data.card_style.font),
         stickers: normalizeStickers(data.card_style.stickers) as CardStyle["stickers"],
         envelope: normalizeEnvelope(data.card_style.envelope),
+        note: normalizeNoteMode(data.card_style.note),
       },
       occasion: data.occasion,
       revealAt: data.reveal_at,
@@ -138,6 +139,7 @@ export function toSource(row: Row & { id?: string }) {
         font: normalizeCardFont(row.card_style.font),
         stickers: normalizeStickers(row.card_style.stickers),
         envelope: normalizeEnvelope(row.card_style.envelope),
+        note: normalizeNoteMode(row.card_style.note),
       },
     },
     occasion: row.occasion,

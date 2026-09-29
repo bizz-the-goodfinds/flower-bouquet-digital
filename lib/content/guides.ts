@@ -145,5 +145,6 @@ export const SITE_FAQ: { q: string; a: string }[] = [
   { q: "Can I send one bouquet to several people?", a: "Yes. Create a personal link for each person. Each one sees their own name on the envelope, and you see who opened it and chat with each person separately." },
   { q: "Where do bouquets I receive go?", a: "Once you open a bouquet, it appears under My bouquets → Received, with your chat and a Send one back button. Sign in to see them on every device." },
   { q: "Can I preview my bouquet without it counting as opened?", a: "Yes. Tap Preview in My bouquets to replay exactly what they see. Your own previews never count as opens." },
+  { q: "Can the note be shown right away instead of tucked in?", a: "Yes. On the card step choose Pinned to show the note beside the bouquet, or Tucked in to hide it in the bouquet as a little card they tap to open. They can switch it on their side too, and videos and GIFs follow your choice." },
   { q: "Do I need to sign up?", a: "No. Your sent and received bouquets are saved on your device under My bouquets. Signing in is optional and only syncs them across devices." },
 ];

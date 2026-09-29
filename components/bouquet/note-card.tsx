@@ -40,7 +40,7 @@ export function NoteCard({
         <p className="font-mono text-xs tracking-[0.12em] uppercase opacity-70 [overflow-wrap:anywhere]">for {show(to, "Their name")}</p>
       )}
       <p
-        className="mt-3 whitespace-pre-wrap [overflow-wrap:anywhere]"
+        className="pp-note-msg mt-3 whitespace-pre-wrap [overflow-wrap:anywhere]"
         style={{ fontFamily: f.css, fontSize: `${f.scale * 1.25}rem`, lineHeight: 1.35, color: message ? t.ink : `${t.ink}88` }}
       >
         {show(message, "Write something from the heart…")}

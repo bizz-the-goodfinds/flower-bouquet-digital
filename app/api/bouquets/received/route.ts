@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { currentUserId } from "@/lib/supabase/server";
 import { normalizeDesign } from "@/lib/bouquet/composition";
 import { normalizeEnvelope } from "@/lib/bouquet/envelope";
-import { normalizeCardFont, normalizeStickers } from "@/lib/bouquet/card";
+import { normalizeCardFont, normalizeNoteMode, normalizeStickers } from "@/lib/bouquet/card";
 import { CONVERSATION_RE, type Row } from "@/lib/server/bouquets";
 import { MESSAGE_COLS, toMessage, type Msg } from "@/lib/server/chat";
 import { json } from "@/lib/server/security";
@@ -75,6 +75,7 @@ export async function POST(req: Request) {
           font: normalizeCardFont(r.card_style.font),
           stickers: normalizeStickers(r.card_style.stickers),
           envelope: normalizeEnvelope(r.card_style.envelope),
+          note: normalizeNoteMode(r.card_style.note),
         },
       };
     })

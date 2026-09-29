@@ -17,7 +17,25 @@ import { track } from "@/lib/analytics/track";
 import type { PublicBouquet, ThreadItem } from "@/lib/server/bouquets";
 import { PreviewChat, RecipientChat, SenderChat } from "./chat";
 import { ChatDock } from "./chat-dock";
-import { NotePick } from "./note-pick";
+import { NoteTag, OpenNote, PinnedNote } from "./note-pick";
+
+const PIN_KEY = "pp-note-pin-v1";
+/** The recipient's own pin choice for a bouquet, or null when they haven't chosen. */
+function readPinPref(slug: string): boolean | null {
+  try {
+    const v = (JSON.parse(localStorage.getItem(PIN_KEY) ?? "{}") as Record<string, boolean>)[slug];
+    return typeof v === "boolean" ? v : null;
+  } catch {
+    return null;
+  }
+}
+function writePinPref(slug: string, v: boolean) {
+  try {
+    const all = JSON.parse(localStorage.getItem(PIN_KEY) ?? "{}") as Record<string, boolean>;
+    all[slug] = v;
+    localStorage.setItem(PIN_KEY, JSON.stringify(all));
+  } catch {}
+}
 
 /** Chat height inside the dock: compact, and never taller than the screen allows. */
 const DOCK_CHAT_H = "h-[min(20rem,calc(100dvh-15rem))]";
@@ -52,6 +70,8 @@ export function RecipientView({
   const [mine, setMine] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteRead, setNoteRead] = useState(false);
+  // Sender's choice by default; the recipient can switch it and we remember that per bouquet.
+  const [pinned, setPinnedState] = useState(bouquet.style.note === "pinned");
   // The sender opening their preview came to see chats: start with the dock open when there are any.
   const [dock, setDock] = useState(() => Boolean(sender?.conversations.some((c) => c.messages.length)));
   const [unread, setUnread] = useState(0);
@@ -93,12 +113,51 @@ export function RecipientView({
     };
   }, [bouquet.slug, bouquet.to, bouquet.from, preview, link]);
 
+  useEffect(() => {
+    if (preview) return;
+    const t = setTimeout(() => {
+      const pref = readPinPref(bouquet.slug);
+      if (pref !== null) setPinnedState(pref);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [bouquet.slug, preview]);
+
+  const setPinned = (v: boolean) => {
+    setPinnedState(v);
+    if (!preview) {
+      writePinPref(bouquet.slug, v);
+      track("note_pinned", { pinned: v });
+    }
+  };
+
+  // Pinned notes are read without a tap, so bring up the chat a little after the bloom instead.
+  useEffect(() => {
+    if (!open || !pinned || !hasNote || noteRead || mine || sender || preview) return;
+    const t = setTimeout(() => {
+      setNoteRead(true);
+      setDock(true);
+    }, 4200);
+    return () => clearTimeout(t);
+  }, [open, pinned, hasNote, noteRead, mine, sender, preview]);
+
   const unwrap = () => {
     setOpen(true);
     if (preview) return;
     track("bouquet_unwrapped", { time_to_unwrap_ms: Math.round(performance.now() - shownAt.current) });
     if (!isMine(bouquet.slug))
       fetch(`/api/bouquets/${bouquet.slug}/view`, { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ link }) }).catch(() => {});
+  };
+
+  const openNote = () => {
+    setNoteOpen(true);
+    setDock(false);
+    if (!preview) track("note_opened", { first: !noteRead, pinned });
+  };
+  const closeNote = () => {
+    setNoteOpen(false);
+    // Just read it: that's the moment to react.
+    if (!noteRead && !mine && !sender) setTimeout(() => setDock(true), 450);
+    setNoteRead(true);
   };
 
   const iconBtn = `flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-40 ${dark ? "border-cream/30 text-cream hover:bg-cream/10" : "border-line bg-paper/80 text-ink hover:bg-paper"}`;
@@ -174,32 +233,30 @@ export function RecipientView({
             key="open"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="relative flex min-h-0 flex-1 items-center justify-center px-4 pt-1 pb-20 sm:pb-6"
+            className={`relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 pt-1 pb-20 sm:pb-6 ${pinned && hasNote ? "lg:flex-row lg:gap-12" : ""}`}
           >
             {!reduce && <PetalRain dark={Boolean(bg.dark)} />}
-            {/* The bouquet owns the screen; the note is tucked into it like a florist card. */}
-            <div className="relative aspect-[4/5] h-full max-h-full max-w-full">
+            {/* The bouquet owns the screen; the note is tucked into it like a florist card, or pinned beside it. */}
+            <div className={`relative aspect-[4/5] max-h-full max-w-full ${pinned && hasNote ? "h-[55%] shrink-0 lg:h-full" : "h-full"}`}>
               <BouquetSvg design={bouquet.design} bloom showBackground={false} label={`A bouquet for ${bouquet.to || "you"}`} className="absolute inset-0 h-full w-full" />
-              {hasNote && (
-                <NotePick
+              {hasNote && !pinned && !noteOpen && <NoteTag note={bouquet} wrapper={bouquet.design.wrapper} hint={!noteRead} onOpen={openNote} delay={noteRead ? 0 : 1.5} />}
+            </div>
+            {hasNote && pinned && !noteOpen && (
+              <PinnedNote note={bouquet} onOpen={openNote} onUnpin={() => setPinned(false)} delay={noteRead ? 0 : 1.6} className="z-10 -mt-8 w-full max-w-md shrink lg:mt-0 lg:w-[26rem]" />
+            )}
+            <AnimatePresence>
+              {noteOpen && (
+                <OpenNote
                   note={bouquet}
-                  wrapper={bouquet.design.wrapper}
-                  open={noteOpen}
-                  hint={!noteRead}
-                  onOpen={() => {
-                    setNoteOpen(true);
-                    setDock(false);
-                    if (!preview) track("note_opened", { first: !noteRead });
+                  pinned={pinned}
+                  onTogglePin={() => {
+                    setPinned(!pinned);
+                    closeNote();
                   }}
-                  onClose={() => {
-                    setNoteOpen(false);
-                    // Just read it: that's the moment to react.
-                    if (!noteRead && !mine && !sender) setTimeout(() => setDock(true), 450);
-                    setNoteRead(true);
-                  }}
+                  onClose={closeNote}
                 />
               )}
-            </div>
+            </AnimatePresence>
 
             <ChatDock
               expanded={dock}

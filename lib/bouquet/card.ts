@@ -43,6 +43,14 @@ const STICKER_SET = new Set<string>(STICKERS);
 export const normalizeStickers = (v: unknown) => (Array.isArray(v) ? v.filter((x) => STICKER_SET.has(x)).slice(0, 3) : []);
 export const MAX_STICKERS = 3;
 
+/** How the note arrives: tucked into the bouquet (tap to open), or pinned beside it (always visible). */
+export const NOTE_MODES = {
+  tucked: { name: "Tucked in", hint: "A little card in the bouquet. They tap to open it." },
+  pinned: { name: "Pinned", hint: "Shown right next to the bouquet, no tap needed." },
+} as const;
+export type NoteMode = keyof typeof NOTE_MODES;
+export const normalizeNoteMode = (v: unknown): NoteMode => (v === "pinned" ? "pinned" : "tucked");
+
 export const EXPIRY_OPTIONS = {
   never: { name: "Forever", days: null },
   "30d": { name: "30 days", days: 30 },
@@ -60,6 +68,7 @@ export const cardStyleSchema = z.object({
   font: z.preprocess((v) => normalizeCardFont(typeof v === "string" ? v : undefined), z.enum(Object.keys(CARD_FONTS) as [CardFont, ...CardFont[]])),
   stickers: z.preprocess(normalizeStickers, z.array(z.enum(STICKERS)).max(MAX_STICKERS)),
   envelope: envelopeSchema,
+  note: z.preprocess(normalizeNoteMode, z.enum(["tucked", "pinned"])).default("tucked"),
 });
 export type CardStyle = z.infer<typeof cardStyleSchema>;
 
