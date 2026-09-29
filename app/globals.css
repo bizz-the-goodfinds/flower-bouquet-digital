@@ -257,3 +257,19 @@ body {
     background-position: -150% 0;
   }
 }
+
+/* "Tap to read" nudge on the tucked-in note (components/reveal/note-pick.tsx) */
+.pp-note-hint {
+  animation: pp-note-hint 2s ease-out infinite;
+}
+@keyframes pp-note-hint {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}

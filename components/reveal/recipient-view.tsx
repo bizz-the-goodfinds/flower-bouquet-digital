@@ -5,7 +5,6 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clapperboard, Download, Film, Flag, Flower2, History } from "lucide-react";
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
-import { NoteCard } from "@/components/bouquet/note-card";
 import { useExport } from "@/components/share/use-export";
 import { Logo } from "@/components/ui/logo";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -17,6 +16,11 @@ import { MiniBloom } from "@/components/ui/bloom-loader";
 import { track } from "@/lib/analytics/track";
 import type { PublicBouquet, ThreadItem } from "@/lib/server/bouquets";
 import { PreviewChat, RecipientChat, SenderChat } from "./chat";
+import { ChatDock } from "./chat-dock";
+import { NotePick } from "./note-pick";
+
+/** Chat height inside the dock: compact, and never taller than the screen allows. */
+const DOCK_CHAT_H = "h-[min(20rem,calc(100dvh-15rem))]";
 import { Envelope } from "./envelope";
 
 /** The sender's own preview (My bouquets): shows every recipient's chat and never counts as an open. */
@@ -46,6 +50,11 @@ export function RecipientView({
   const [open, setOpen] = useState(false);
   const [conversation, setConversation] = useState<string | null>(null);
   const [mine, setMine] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteRead, setNoteRead] = useState(false);
+  // The sender opening their preview came to see chats: start with the dock open when there are any.
+  const [dock, setDock] = useState(() => Boolean(sender?.conversations.some((c) => c.messages.length)));
+  const [unread, setUnread] = useState(0);
   const shownAt = useRef(0);
   const reduce = useReducedMotion();
   const bg = BACKGROUNDS[bouquet.design.background] ?? BACKGROUNDS.cream;
@@ -96,7 +105,7 @@ export function RecipientView({
 
   return (
     <div
-      className={`relative flex min-h-dvh flex-col transition-colors duration-700 ${preview ? "min-h-full" : ""}`}
+      className={`relative flex flex-col transition-colors duration-700 ${open ? `${preview ? "h-[calc(100dvh-1.75rem)]" : "h-dvh"} overflow-hidden` : preview ? "min-h-full" : "min-h-dvh"}`}
       style={{ background: open ? bg.fill : "var(--color-cream)" }}
     >
       {/* Top bar: brand + actions, always reachable without scrolling */}
@@ -165,50 +174,51 @@ export function RecipientView({
             key="open"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-6 px-4 pb-8 pt-2 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 ${preview ? "lg:h-[calc(100dvh-6rem)]" : "lg:h-[calc(100dvh-4.25rem)]"} lg:pb-4`}
+            className="relative flex min-h-0 flex-1 items-center justify-center px-4 pt-1 pb-20 sm:pb-6"
           >
             {!reduce && <PetalRain dark={Boolean(bg.dark)} />}
-            {/* The gift: bouquet with the note tucked underneath. */}
-            <section aria-label="Your bouquet" className="flex min-h-0 min-w-0 flex-col items-center lg:h-full lg:justify-center lg:overflow-y-auto lg:py-2">
-              <BouquetSvg
-                design={bouquet.design}
-                bloom
-                showBackground={false}
-                label={`A bouquet for ${bouquet.to || "you"}`}
-                className={`h-auto w-full max-w-[400px] shrink-0 lg:w-auto lg:max-w-full ${hasNote ? "lg:h-[calc(100dvh-19rem)]" : "lg:h-[calc(100dvh-8rem)]"}`}
-              />
+            {/* The bouquet owns the screen; the note is tucked into it like a florist card. */}
+            <div className="relative aspect-[4/5] h-full max-h-full max-w-full">
+              <BouquetSvg design={bouquet.design} bloom showBackground={false} label={`A bouquet for ${bouquet.to || "you"}`} className="absolute inset-0 h-full w-full" />
               {hasNote && (
-                <motion.div
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 60, rotate: 4 }}
-                  animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, rotate: -1.5 }}
-                  transition={{ delay: reduce ? 0.2 : 1.6, type: "spring", stiffness: 120, damping: 16 }}
-                  className="relative z-10 -mt-10 w-full max-w-md shrink-0 px-2 sm:-mt-14"
-                >
-                  <NoteCard to={bouquet.to} from={bouquet.from} message={bouquet.message} style={bouquet.style} />
-                </motion.div>
+                <NotePick
+                  note={bouquet}
+                  wrapper={bouquet.design.wrapper}
+                  open={noteOpen}
+                  hint={!noteRead}
+                  onOpen={() => {
+                    setNoteOpen(true);
+                    setDock(false);
+                    if (!preview) track("note_opened", { first: !noteRead });
+                  }}
+                  onClose={() => {
+                    setNoteOpen(false);
+                    // Just read it: that's the moment to react.
+                    if (!noteRead && !mine && !sender) setTimeout(() => setDock(true), 450);
+                    setNoteRead(true);
+                  }}
+                />
               )}
-            </section>
+            </div>
 
-            {/* The conversation: chat, thread and extras in their own panel. */}
-            <motion.aside
-              aria-label="Reactions and chat"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduce ? 0.3 : 2.2 }}
-              className={`relative z-10 flex min-h-0 min-w-0 flex-col gap-3 rounded-[1.75rem] border p-3 backdrop-blur-sm sm:p-4 lg:max-h-full lg:self-center lg:overflow-y-auto ${
-                bg.dark ? "border-cream/20 bg-cream/10 text-cream" : "border-line bg-paper/70 text-ink"
-              }`}
+            <ChatDock
+              expanded={dock}
+              onToggle={(next) => {
+                setDock(next);
+                if (next) setUnread(0);
+              }}
+              unread={unread}
+              label={sender ? "Reactions & chat" : preview ? "Their chat" : mine ? "Your bouquet" : `Chat with ${bouquet.from || "them"}`}
             >
-              <p className={`label px-1 ${bg.dark ? "!text-cream/70" : ""}`}>{sender ? "Reactions & chat" : preview ? "Their side" : mine ? "Your bouquet" : `Talk to ${bouquet.from || "them"}`}</p>
               {sender ? (
                 <>
-                  <SenderChat slug={bouquet.slug} token={sender.token} to={bouquet.to} conversations={sender.conversations} refreshKey={sender.refreshKey} />
+                  <SenderChat slug={bouquet.slug} token={sender.token} to={bouquet.to} conversations={sender.conversations} refreshKey={sender.refreshKey} height={DOCK_CHAT_H} />
                   {sender.extra}
                 </>
               ) : preview ? (
-                <PreviewChat />
+                <PreviewChat height={DOCK_CHAT_H} />
               ) : mine ? (
-                <p className={`rounded-2xl px-4 py-3 text-sm ${bg.dark ? "bg-cream/10" : "bg-paper"}`}>
+                <p className="rounded-2xl bg-cream px-4 py-3 text-sm">
                   This is your bouquet 💐 See opens and chat with {bouquet.to || "them"} in{" "}
                   <Link href="/garden" className="underline underline-offset-2">
                     My bouquets
@@ -216,13 +226,13 @@ export function RecipientView({
                   .
                 </p>
               ) : (
-                <RecipientChat slug={bouquet.slug} conversation={conversation} from={bouquet.from} />
+                <RecipientChat slug={bouquet.slug} conversation={conversation} from={bouquet.from} height={DOCK_CHAT_H} onIncoming={() => !dock && setUnread((n) => n + 1)} />
               )}
-              {thread.length > 0 && <ThreadStrip thread={thread} dark={Boolean(bg.dark)} />}
-              <div className="pt-1 text-center">
-                <Footer slug={bouquet.slug} dark={Boolean(bg.dark)} hideReport={mine || Boolean(preview)} />
+              {thread.length > 0 && <ThreadStrip thread={thread} dark={false} />}
+              <div className="px-1 pb-1 text-center">
+                <Footer slug={bouquet.slug} dark={false} hideReport={mine || Boolean(preview)} />
               </div>
-            </motion.aside>
+            </ChatDock>
           </motion.div>
         )}
       </AnimatePresence>

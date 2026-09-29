@@ -123,6 +123,8 @@ function ChatWindow({
   header,
   empty,
   placeholder,
+  height = "h-[24rem]",
+  onIncoming,
 }: {
   slug: string;
   /** null while the recipient's conversation id is being worked out. */
@@ -137,6 +139,10 @@ function ChatWindow({
   header: React.ReactNode;
   empty: React.ReactNode;
   placeholder: string;
+  /** Tailwind height class for the whole window. */
+  height?: string;
+  /** Called when the other side's message arrives (after the first load). */
+  onIncoming?: () => void;
 }) {
   const live = !staticMessages && conversation ? conversation : null;
   const [messages, setMessages] = useState<ChatMessage[] | null>(staticMessages ?? null);
@@ -163,9 +169,18 @@ function ChatWindow({
     [slug, live],
   );
 
+  const msgsRef = useRef<ChatMessage[] | null>(null);
+  const onIncomingRef = useRef(onIncoming);
+  useEffect(() => {
+    msgsRef.current = messages;
+    onIncomingRef.current = onIncoming;
+  });
+
   const refresh = useCallback(async () => {
     const data = await fetchPage();
     if (!data) return setMessages((m) => m ?? []);
+    const prev = msgsRef.current;
+    if (prev && data.messages.some((m) => m.author !== me && !prev.some((p) => p.id === m.id))) onIncomingRef.current?.();
     const grew = (prev: ChatMessage[] | null) => prev !== null && data.messages.some((m) => !prev.some((p) => p.id === m.id));
     setMessages((prev) => {
       if (prev === null) {
@@ -177,7 +192,7 @@ function ChatWindow({
       }
       return merge(prev ?? [], data.messages);
     });
-  }, [fetchPage]);
+  }, [fetchPage, me]);
 
   const liveChat = useLiveChat(live ? chatChannel(slug, live) : null, me, refresh);
 
@@ -235,7 +250,7 @@ function ChatWindow({
   const status = liveChat.peerTyping ? `${other} is typing…` : liveChat.peerOnline ? `${other} is here` : null;
 
   return (
-    <div className="flex h-[24rem] flex-col overflow-hidden rounded-[1.25rem] border-[1.5px] border-ink bg-paper text-left text-ink shadow-[3px_3px_0_0_var(--color-ink)]">
+    <div className={`flex ${height} flex-col overflow-hidden rounded-[1.25rem] border-[1.5px] border-ink bg-paper text-left text-ink`}>
       <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
         <div className="min-w-0 flex-1 text-sm font-medium">{header}</div>
         {status && (
@@ -296,7 +311,7 @@ function ChatWindow({
 }
 
 /** The recipient's chat with the sender. */
-export function RecipientChat({ slug, conversation, from }: { slug: string; conversation: string | null; from: string }) {
+export function RecipientChat({ slug, conversation, from, height, onIncoming }: { slug: string; conversation: string | null; from: string; height?: string; onIncoming?: () => void }) {
   const who = from || "them";
   const send: SendFn = async (msg) => {
     const res = await fetch("/api/reactions", {
@@ -324,20 +339,36 @@ export function RecipientChat({ slug, conversation, from }: { slug: string; conv
         </span>
       }
       placeholder={`Message ${who}…`}
+      height={height}
+      onIncoming={onIncoming}
     />
   );
 }
 
 /** What the sender sees in their own preview: one tab per recipient, answer each one. */
-export function SenderChat({ slug, token, to, conversations, refreshKey }: { slug: string; token: string | null; to: string; conversations: Conversation[]; refreshKey?: number }) {
+export function SenderChat({
+  slug,
+  token,
+  to,
+  conversations,
+  refreshKey,
+  height,
+}: {
+  slug: string;
+  token: string | null;
+  to: string;
+  conversations: Conversation[];
+  refreshKey?: number;
+  height?: string;
+}) {
   const names = conversationNames(conversations, to);
   const [active, setActive] = useState<string | null>(() => pickFirst(conversations));
   const conv = conversations.find((c) => c.id === active) ?? conversations[0] ?? null;
 
   if (!conv)
     return (
-      <div className="rounded-[1.25rem] border-[1.5px] border-ink bg-paper px-4 py-3 text-left shadow-[3px_3px_0_0_var(--color-ink)]">
-        <p className="text-sm font-medium">Reactions & chat 💬</p>
+      <div className="rounded-[1.25rem] border-[1.5px] border-ink bg-paper px-4 py-3 text-left">
+        <p className="text-sm font-medium">No reactions yet 💬</p>
         <p className="mt-1 text-sm text-ink-soft">No reactions yet. When {to || "they"} react, it shows up here and you can chat back, live.</p>
       </div>
     );
@@ -386,6 +417,7 @@ export function SenderChat({ slug, token, to, conversations, refreshKey }: { slu
         }
         empty={<span>Nothing yet. Say hi, or wait for {name} to react.</span>}
         placeholder={`Reply to ${name}…`}
+        height={height}
       />
     </div>
   );
@@ -398,9 +430,9 @@ function pickFirst(list: Conversation[]) {
 }
 
 /** Non-interactive stand-in shown in the "Preview & send" replay. */
-export function PreviewChat() {
+export function PreviewChat({ height = "h-[24rem]" }: { height?: string }) {
   return (
-    <div className="pointer-events-none flex h-[24rem] flex-col overflow-hidden rounded-[1.25rem] border-[1.5px] border-ink bg-paper text-left text-ink shadow-[3px_3px_0_0_var(--color-ink)]" aria-hidden>
+    <div className={`pointer-events-none flex ${height} flex-col overflow-hidden rounded-[1.25rem] border-[1.5px] border-ink bg-paper text-left text-ink`} aria-hidden>
       <p className="border-b border-line px-4 py-2.5 text-sm font-medium">Chat 💬</p>
       <div className="grid flex-1 place-items-center px-4 text-center text-sm text-ink-soft">They can react and chat with you here, live.</div>
       <div className="opacity-60">

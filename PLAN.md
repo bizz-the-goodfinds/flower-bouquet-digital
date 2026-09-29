@@ -453,6 +453,7 @@ See the checklist in the chat reply / below.
 - Threads: "send one back" chains share a thread; My bouquets groups them into one connected row; the recipient page shows "Earlier in this thread".
 - Several recipients: personal links per person (their name on the envelope, their own opens and chat).
 - My bouquets cards show a one-line summary ("Sam and 2 others reacted ❤️", new badge) instead of the full reactions; "Preview" replays the bouquet without counting an open.
+- Opened bouquet is bouquet-first and fits one screen: the note is a florist card tucked into the bouquet (tap: it flies out and unfolds; "Tuck it back" returns it), and chat, thread and extras live in a small floating dock that can be hidden (unread badge; opens itself after the note is first read).
 - Catalog: 3 new wraps (layered, basket, mason jar) = 8; 8 new papers incl. stripes, hearts, gingham and starry prints = 20; 7 new ribbons = 14; 7 new backgrounds incl. 3 dark = 14.
 - Needs: run migration `0004_threads_chat_links.sql` before deploying (the recipient page reads the new columns).
 
