@@ -45,11 +45,18 @@ export const MAX_STICKERS = 3;
 
 /** How the note arrives: tucked into the bouquet (tap to open), or pinned beside it (always visible). */
 export const NOTE_MODES = {
-  tucked: { name: "Tucked in", hint: "A little card in the bouquet. They tap to open it." },
+  tucked: { name: "Tucked in", hint: "A little tag on the ribbon. They tap to open it." },
   pinned: { name: "Pinned", hint: "Shown right next to the bouquet, no tap needed." },
 } as const;
 export type NoteMode = keyof typeof NOTE_MODES;
 export const normalizeNoteMode = (v: unknown): NoteMode => (v === "pinned" ? "pinned" : "tucked");
+
+/**
+ * The tucked note hangs off the ribbon like a gift tag. In tag widths from the bow's knot: the card's top-left
+ * corner (it swings from there), the eyelet the string goes through, and the swing in degrees.
+ * Shared by the recipient page and the video/GIF export so both match.
+ */
+export const TAG_HANG = { dx: 0.18, dy: 0.2, eyelet: 0.05, rot: 7 } as const;
 
 export const EXPIRY_OPTIONS = {
   never: { name: "Forever", days: null },

@@ -1,7 +1,7 @@
 "use client";
 
 import { BACKGROUNDS, DEFAULTS } from "./catalog";
-import { CARD_FONTS, CARD_TEMPLATES, normalizeCardFont, normalizeNoteMode, type CardStyle } from "./card";
+import { CARD_FONTS, CARD_TEMPLATES, TAG_HANG, normalizeCardFont, normalizeNoteMode, type CardStyle } from "./card";
 import { CANVAS, bouquetLayers, normalizeDesign, tieOf, type Design } from "./composition";
 import { ENVELOPE_COLORS, envelopeSvg, normalizeEnvelope } from "./envelope";
 import { logoSvg } from "../brand";
@@ -250,7 +250,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
   // Petals drift down once it's unwrapped, like the petal rain on the recipient page.
   drawPetals(ctx, W, H, ms - T.envOut, A.dark);
 
-  // 3) The note, as the recipient page shows it: pinned (slides up under the bouquet) or tucked (pick → flies out → unfolds).
+  // 3) The note, as the recipient page shows it: pinned (slides up under the bouquet) or tucked (tag on the ribbon → flies out → unfolds).
   if (hasNote(src)) {
     const { tl } = st;
     if (tl.fly === Infinity) {
@@ -265,13 +265,19 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
       const tie = tieOf(normalizeDesign(src.design).wrapper);
       const tagW = bw * 0.26;
       const tagH = tagW * 0.62;
-      const tag = { cx: left + (tie.x + 40) * scale + tagW / 2, cy: top + (tie.y - 360) * scale + tagH / 2 };
+      // Hangs off the bow's knot on a string; its centre is the swung card's middle (where the fly-out starts).
+      const knot = { x: left + tie.x * scale, y: top + tie.y * scale };
+      const a = (TAG_HANG.rot * Math.PI) / 180;
+      const tag = {
+        cx: knot.x + TAG_HANG.dx * tagW + (tagW / 2) * Math.cos(a) - (tagH / 2) * Math.sin(a),
+        cy: knot.y + TAG_HANG.dy * tagW + (tagW / 2) * Math.sin(a) + (tagH / 2) * Math.cos(a),
+      };
       const f = easeInOut((ms - tl.fly) / 750);
       if (f <= 0) {
         const k = easeOutBack((ms - tl.card) / 550);
-        if (k > 0.001) drawTag(ctx, st, tag.cx, tag.cy, tagW, tagH, k, ms > tl.card + 600 ? (ms - tl.card - 600) % 1400 / 1400 : -1);
+        if (k > 0.001) drawTag(ctx, st, knot.x, knot.y, tagW, tagH, k, ms > tl.card + 600 ? (ms - tl.card - 600) % 1400 / 1400 : -1);
       } else {
-        // Dim the bouquet, then the card grows from its pick to the centre and unfolds from the top.
+        // Dim the bouquet, then the card grows from the ribbon to the centre and unfolds from the top.
         ctx.save();
         ctx.fillStyle = `rgba(27,26,23,${0.35 * f})`;
         ctx.fillRect(0, 0, W, H);
@@ -284,7 +290,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
           cx: tag.cx + (W / 2 - tag.cx) * f,
           cy: tag.cy + (cy - tag.cy) * f,
           cw,
-          rot: 8 + (-1.5 - 8) * f,
+          rot: TAG_HANG.rot + (-1.5 - TAG_HANG.rot) * f,
           alpha: 1,
           scale: k,
           unfold: 0.35 + 0.65 * easeOut((ms - tl.fly - 250) / 600),
@@ -388,23 +394,33 @@ function drawNoteCard(
   ctx.restore();
 }
 
-/** The small florist card on its pick, tucked into the bouquet. `pulse` (0..1, or -1 for none) draws the "tap me" ring. */
-function drawTag(ctx: CanvasRenderingContext2D, st: Stage, cx: number, cy: number, w: number, h: number, k: number, pulse: number) {
+/** The note as a gift tag hanging from the bow's knot (kx, ky) on a string. `pulse` (0..1, or -1 for none) draws the "tap me" ring. */
+function drawTag(ctx: CanvasRenderingContext2D, st: Stage, kx: number, ky: number, w: number, h: number, k: number, pulse: number) {
   const { src, fonts } = st;
   const t = CARD_TEMPLATES[src.style.template] ?? CARD_TEMPLATES.paper;
+  const a = (TAG_HANG.rot * Math.PI) / 180;
+  const e = TAG_HANG.eyelet * w;
+  const ox = TAG_HANG.dx * w;
+  const oy = TAG_HANG.dy * w;
+  const end = { x: ox + e * Math.cos(a) - e * Math.sin(a), y: oy + e * Math.sin(a) + e * Math.cos(a) };
   ctx.save();
-  ctx.translate(cx, cy);
+  ctx.translate(kx, ky);
   ctx.scale(k, k);
-  // pick
-  ctx.save();
-  ctx.translate(-w * 0.2, h * 0.3);
-  ctx.rotate((18 * Math.PI) / 180);
-  ctx.fillStyle = "#1B1A17";
-  ctx.fillRect(-3.5, 0, 7, h * 1.1);
-  ctx.fillStyle = "#6E9C63";
-  ctx.fillRect(-2, 0, 4, h * 1.1 - 1.5);
-  ctx.restore();
-  ctx.rotate((8 * Math.PI) / 180);
+  // twine: light core with an ink edge so it reads on dark and pale wraps alike
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(end.x * 0.3, end.y * 0.95, end.x, end.y);
+  ctx.strokeStyle = "#1B1A17";
+  ctx.lineWidth = 3.4;
+  ctx.stroke();
+  ctx.strokeStyle = "#F3E3C3";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // the card swings from its top-left corner; draw it around its centre from here on
+  ctx.translate(ox, oy);
+  ctx.rotate(a);
+  ctx.translate(w / 2, h / 2);
   if (pulse >= 0) {
     ctx.save();
     ctx.globalAlpha = (1 - pulse) * 0.8;
@@ -424,9 +440,13 @@ function drawTag(ctx: CanvasRenderingContext2D, st: Stage, cx: number, cy: numbe
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = "#1B1A17";
   ctx.stroke();
-  ctx.fillStyle = "rgba(247,222,138,.85)";
-  ctx.fillRect(-w * 0.14, -h / 2 - h * 0.08, w * 0.28, h * 0.16);
-  const px = -w / 2 + w * 0.09;
+  // eyelet
+  ctx.beginPath();
+  ctx.arc(-w / 2 + e, -h / 2 + e, Math.max(3, w * 0.03), 0, Math.PI * 2);
+  ctx.fillStyle = "#FBF6EE";
+  ctx.fill();
+  ctx.stroke();
+  const px = -w / 2 + w * 0.12;
   ctx.fillStyle = t.ink;
   ctx.globalAlpha = 0.7;
   ctx.font = `${Math.round(h * 0.15)}px ${fonts.mono}`;

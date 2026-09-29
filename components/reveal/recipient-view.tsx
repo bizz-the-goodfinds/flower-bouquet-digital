@@ -239,10 +239,10 @@ export function RecipientView({
             key="open"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 pt-1 pb-20 sm:pb-6 ${pinned && hasNote ? "lg:flex-row lg:gap-12" : ""}`}
+            className={`relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 pt-1 pb-20 transition-[padding] duration-500 sm:pb-6 ${pinned && hasNote ? `lg:flex-row lg:gap-12 ${dock ? "lg:pr-[24rem]" : ""}` : ""}`}
           >
             {!reduce && <PetalRain dark={Boolean(bg.dark)} />}
-            {/* The bouquet owns the screen; the note is tucked into it like a florist card, or pinned beside it. */}
+            {/* The bouquet owns the screen; the note hangs off its ribbon like a gift tag, or is pinned beside it (making room for the open chat dock on wide screens). */}
             <div className={`relative aspect-[4/5] max-h-full max-w-full ${pinned && hasNote ? "h-[55%] shrink-0 lg:h-full" : "h-full"}`}>
               <BouquetSvg design={bouquet.design} bloom showBackground={false} label={`A bouquet for ${bouquet.to || "you"}`} className="absolute inset-0 h-full w-full" />
               {hasNote && !pinned && !noteOpen && <NoteTag note={bouquet} wrapper={bouquet.design.wrapper} hint={!noteRead} onOpen={openNote} delay={noteRead ? 0 : 1.5} />}

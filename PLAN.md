@@ -492,7 +492,7 @@ See the checklist in the chat reply / below.
 - Several recipients: personal links per person (their name on the envelope, their own opens and chat).
 - My bouquets cards show a one-line summary ("Sam and 2 others reacted ❤️", new badge) instead of the full reactions; "Preview" replays the bouquet without counting an open.
 - Opened bouquet is bouquet-first and fits one screen: the note is a florist card tucked into the bouquet (tap: it flies out and unfolds; "Tuck it back" returns it), and chat, thread and extras live in a small floating dock that can be hidden (unread badge; opens itself after the note is first read).
-- Note display is a preference: the sender picks "Tucked in" (florist card in the bouquet, tap to open) or "Pinned" (always shown beside the bouquet) on the Write step; the recipient can pin/unpin it themselves (remembered per bouquet). Video and GIF follow the sender's choice: pinned slides the card up under the bouquet, tucked shows the card on its pick, then flies it out and unfolds it.
+- Note display is a preference: the sender picks "Tucked in" (a gift tag hanging off the ribbon on a string, clear of the flowers; tap to open) or "Pinned" (always shown beside the bouquet) on the Write step; the recipient can pin/unpin it themselves (remembered per bouquet). Video and GIF follow the sender's choice: pinned slides the card up under the bouquet, tucked shows the tag on the ribbon, then flies it out and unfolds it.
 - Catalog: 3 new wraps (layered, basket, mason jar) = 8; 8 new papers incl. stripes, hearts, gingham and starry prints = 20; 7 new ribbons = 14; 7 new backgrounds incl. 3 dark = 14.
 - Needs: run migration `0004_threads_chat_links.sql` before deploying (the recipient page reads the new columns).
 
