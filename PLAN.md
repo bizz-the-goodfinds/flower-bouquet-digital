@@ -1,6 +1,6 @@
 # Flower Bouquet Digital — Product & Build Plan
 
-Status (2026-09-30): v1 is built; v1.1 (envelope link previews, chat, threads, received bouquets, personal links, more wraps) is in progress. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
+Status (2026-09-30): v1, v1.1 and v1.2 are built. v2 (AI note writer with bring-your-own-key, song and voice notes, streaks/badges/referral stats, PWA install and push) is planned; see section 3. Monetization and Sentry are v3. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
 
 ---
 
@@ -71,15 +71,79 @@ Every received bouquet is an ad for the product. The "send one back" button is t
 - Profanity / abuse filter on note text, report button on recipient view.
 - Shared bouquet pages are `noindex` (private by default).
 
-### v2 (after launch, not in first build unless you say so)
-- AI note writer ("help me write something cute / funny / deep") via Claude API.
-- Song attachment (Spotify / YouTube link card) and voice note.
-- Group bouquet: multiple friends each add a flower + message to one bouquet.
-- Public "garden" gallery of opted-in bouquets.
-- Streaks / badges, referral stats.
-- More languages (Hindi, Spanish, etc.) with hreflang.
-- PWA install + push ("your bouquet was opened").
-- Monetization: premium flower packs, remove watermark, custom wrapper, physical flower delivery affiliate.
+### v2 (planned 2026-09-30, one-go build)
+
+Four features. Dropped from v2: group bouquet, public "garden" gallery, more languages. Monetization and Sentry moved to v3.
+
+**1. AI note writer: bring your own key**
+- A "Help me write" button on the Write step. The sender picks a tone (cute, funny, deep, romantic, sorry, short and sweet) and can add a few details ("we met at uni", "she loves cats"). The recipient name and occasion are filled in for them. The writer returns 3 drafts; tapping one puts it in the note, where it can be edited. Follow-up buttons: "Shorter", "More emoji", "Try again". Drafts stay within the 500-character note limit.
+- **We never pay for AI and never hold keys.** Each user connects their own AI account in one of two ways:
+  - **Paste a key** from OpenAI (ChatGPT), Anthropic (Claude) or Google (Gemini). Gemini has a free tier, so the guide suggests it to people without a paid account.
+  - **Sign in with OpenRouter.** This uses OpenRouter's OAuth flow (PKCE): the user logs in, approves, and comes back with a key. No copy-pasting. One OpenRouter account covers models from every major provider.
+- **Built-in guides.** A setup sheet walks through each provider: where to sign up, the exact page for creating a key, whether it's free or paid (with a rough cost per note, a fraction of a cent), and how to set a spending limit. A "Test key" button confirms the key works before it is saved. The same guides are published as a public page, `/guides/ai-note-writer-api-key`, which also works as SEO/AEO content.
+- **Key safety.**
+  - The key stays in the user's browser. By default it lasts for the session only; a "Remember on this device" option keeps it in localStorage.
+  - The browser calls the provider directly (all four support browser requests), so the key never reaches our server, database, logs, analytics or Clarity recordings. The key field is masked in Clarity.
+  - "Disconnect" deletes it.
+  - Fallback, only if a provider blocks browser calls: a pass-through route that forwards the request without storing or logging it.
+- Default models are each provider's cheap, fast tier (Claude: Haiku 4.5; the others are picked at build time). An advanced setting lets users change the model.
+- The system prompt keeps drafts kind and on-occasion. Drafts still go through the existing note moderation when the bouquet is created.
+- Errors get plain messages: invalid key, out of credit, rate limited, provider down.
+- Analytics events: `ai_setup_started`, `ai_key_connected` (provider, method), `ai_note_generated` (provider, tone), `ai_note_used`. Never the key, the prompt or the draft text.
+
+**2. Song and voice note**
+- **Song.** The sender pastes a Spotify, YouTube or Apple Music link. The server validates it and fetches the title, artist and thumbnail through each service's oEmbed endpoint (no API keys needed). The recipient sees a small song card after the note; tapping it loads the embedded player. The player only loads on tap, so no third-party cookies are set before then and autoplay rules aren't an issue. PNG, video and GIF exports show the song card as a static image.
+- **Voice note.**
+  - Recorded in the browser, up to 60 seconds, with preview, re-record and delete.
+  - Uploaded to a private Supabase Storage bucket (`voice-notes`, max 2 MB) and played through a short-lived signed URL.
+  - Deleted along with its bouquet. Covered by rate limits and the report flow.
+  - Plays after the note on the recipient page. Chrome records WebM/Opus and Safari records MP4/AAC; playback is tested on iOS Safari, Android Chrome and in-app browsers.
+- Both are optional and are added from the Write step.
+
+**3. Streaks, badges and referral stats**
+- **Streak:** the number of weeks in a row the user has sent at least one bouquet. Weekly, not daily, because nobody sends flowers every day.
+- **Badges:** first bouquet; 5, 25 and 100 sent; first reply received; a thread 5 deep; every occasion used once; first voice note; first song. Earned badges get a small celebration and a shareable badge image.
+- **Referral stats:** "3 people sent their first bouquet after opening one of yours." Counted when a recipient creates a bouquet from the "Send one back" link or another link carrying `ref`. Opens and reactions per bouquet are already tracked.
+- Shown in a "Your garden" stats strip at the top of My bouquets. Works on a device without an account and syncs once signed in.
+
+**4. PWA install and push notifications**
+- **Service worker.** Caches the app shell and static assets so the builder opens fast and survives a flaky connection. Private bouquet pages and API responses are never cached.
+- **Install.** An "Add to home screen" button uses the browser's install prompt on Android and desktop Chrome/Edge. iOS gets a short illustrated "Share → Add to Home Screen" sheet. The button is offered after a user's second bouquet, not on first visit.
+- **Push.**
+  - Permission is asked in context, after sending: "Want to know when Sam opens it?"
+  - Notifications:
+    - bouquet opened for the first time (for personal links, per recipient)
+    - new chat message or reaction
+    - a scheduled bouquet has been revealed
+  - Sent from our API with Web Push (VAPID) when the event is recorded. Subscriptions live in a new `push_subscriptions` table tied to the owner token or account.
+  - Users choose which notifications they get in My bouquets, and can turn them all off.
+  - iOS only supports push for apps added to the home screen (iOS 16.4+). The UI says so instead of failing silently.
+
+**Supporting work**
+- Migration `0006_v2.sql`:
+  - song and voice columns on bouquets
+  - `voice-notes` storage bucket and policies
+  - `push_subscriptions` table
+  - `badges` table
+  - `ref_bouquet_id` on bouquets
+  - streak/stats view
+  - RLS for all of the above
+- Privacy policy and terms: AI providers (keys stay in the browser; text goes straight to the chosen provider), voice storage, embedded players, push. FAQ entries and llms.txt updated.
+- New dependency: `web-push` (server). No AI SDKs; plain `fetch` keeps the bundle small.
+- QA: the existing overflow, CTA and Lighthouse checks must still pass, plus tests for mic permission, push permission and install on real iOS and Android devices.
+
+**Build order for v2**
+1. Migration + types.
+2. AI note writer + guides page.
+3. Song + voice note (Write step, recipient page, exports).
+4. Streaks, badges, referral stats.
+5. Service worker, install, push.
+6. Privacy/terms/FAQ/llms.txt, analytics events, QA pass.
+
+### v3 (later)
+- Monetization: premium flower packs, removing the watermark, custom wrappers, and an affiliate link for real flower delivery.
+- Commissioned flower art. This pairs with premium packs.
+- Sentry error tracking: `@sentry/nextjs` on client, server and edge; source maps uploaded on each Vercel build; a tunnel route so ad blockers don't drop reports. Note text, names, emails and AI keys are scrubbed. Replays are off, sample rates stay inside the free tier, and alerts go to email.
 
 ---
 
@@ -99,7 +163,9 @@ Every received bouquet is an ad for the product. The "send one back" button is t
 | Image export | `html-to-image` / SVG → canvas | Client-side PNG + story export |
 | Analytics | Microsoft Clarity + Firebase Analytics (GA4) + Vercel Speed Insights | Heatmaps/replays + funnels + real-user Core Web Vitals |
 | Bot protection | Cloudflare Turnstile | Free, invisible |
-| Error tracking | Sentry (optional) | Production bugs |
+| Error tracking | Sentry (v3) | Production bugs |
+| AI note writer | User's own key: OpenAI, Anthropic, Gemini or OpenRouter (OAuth), called from the browser (v2) | No AI cost for us, no keys on our servers |
+| Push | Web Push (VAPID) via `web-push` + service worker (v2) | "Your bouquet was opened" |
 | Fonts | `next/font` self-hosted | No layout shift, no third-party font request |
 
 ---
@@ -523,6 +589,12 @@ See the checklist in the chat reply / below.
 - Submit the sitemap to Google Search Console and Bing Webmaster Tools; verify Clarity masking on production.
 - Sign-ups are not email-verified, so someone could register an email they don't own. Acceptable for syncing bouquets; revisit before adding anything sensitive.
 
-### Not started (v2 ideas from section 3)
-AI note writer, song/voice attachments, group bouquets, public garden gallery, streaks/badges, more languages, PWA push notifications, monetization, commissioned flower art, Sentry error tracking.
+### v2 inputs (needed before the v2 build)
+1. **Web Push:** a contact email for the VAPID `mailto:` subject (it can be the same as the privacy/terms contact email). The VAPID key pair gets generated during the build and goes into Vercel env.
+2. **AI testing:** your own key for at least one provider, or an OpenRouter account, entered in the app to test it, not in chat. No app registration is needed on our side, including for OpenRouter sign-in.
+3. **Supabase:** run `0006_v2.sql` after the build (it also creates the `voice-notes` bucket).
+4. **Decisions** (defaults in section 3 are used unless you say otherwise): which AI providers to support, whether the key is remembered by default, voice note length (60s), song sources (Spotify, YouTube, Apple Music), weekly streaks, push triggers.
 
+### Not started
+- v2: everything in section 3 → v2.
+- v3: monetization, commissioned flower art, Sentry.
