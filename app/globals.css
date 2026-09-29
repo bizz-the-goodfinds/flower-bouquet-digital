@@ -273,3 +273,83 @@ body {
     transform: scale(1.12);
   }
 }
+
+/* Landing hero (app/(site)/page.tsx): CSS-only bloom, sway, petals and sparkles */
+.pp-hero-bloom,
+.pp-hero-sway {
+  transform-box: fill-box;
+  transform-origin: 50% 85%;
+}
+.pp-hero-bloom {
+  animation: pp-hero-bloom 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes pp-hero-bloom {
+  from {
+    transform: scale(0.1) rotate(-25deg);
+    opacity: 0;
+  }
+}
+.pp-hero-sway {
+  animation: pp-hero-sway 4s ease-in-out infinite alternate;
+}
+@keyframes pp-hero-sway {
+  from {
+    transform: rotate(calc(var(--sway, 3deg) * -1));
+  }
+  to {
+    transform: rotate(var(--sway, 3deg));
+  }
+}
+.pp-hero-petal {
+  opacity: 0;
+  animation: pp-hero-petal 10s linear infinite;
+}
+@keyframes pp-hero-petal {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate3d(38px, 470px, 0) rotate(420deg);
+    opacity: 0;
+  }
+}
+.pp-hero-sparkle {
+  opacity: 0;
+  animation: pp-hero-sparkle 4.5s ease-in-out infinite;
+  text-shadow: 0 0 1px var(--color-ink);
+}
+@keyframes pp-hero-sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.1) rotate(45deg);
+  }
+  40% {
+    opacity: 0;
+    transform: scale(0.4) rotate(90deg);
+  }
+}
+.pp-hero-note {
+  transform-origin: 50% -12px;
+  animation: pp-hero-note 5s ease-in-out infinite;
+}
+@keyframes pp-hero-note {
+  0%,
+  100% {
+    transform: rotate(6deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}

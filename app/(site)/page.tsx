@@ -9,6 +9,22 @@ import { site } from "@/lib/site";
 
 const HERO = { stems: ["peony", "red-rose", "pink-rose", "pink-tulip", "ranunculus", "daisy", "babys-breath", "lavender", "eucalyptus", "fern", "white-rose"], wrap: "cone", paper: "kraft", ribbon: "cherry", background: "cream" };
 
+/** [left %, delay s, duration s, colour] */
+const HERO_PETALS: [number, number, number, string][] = [
+  [8, 0.4, 9, "#F4A6C0"],
+  [22, 3.1, 11, "#F7DE8A"],
+  [41, 1.6, 10, "#C9B8F2"],
+  [63, 4.4, 12, "#F28A6B"],
+  [80, 2.2, 9.5, "#F4A6C0"],
+  [93, 5.6, 11, "#C9B8F2"],
+];
+/** [left %, top %, delay s] */
+const HERO_SPARKLES: [number, number, number][] = [
+  [12, 22, 0.8],
+  [86, 14, 2.1],
+  [74, 44, 3.4],
+];
+
 const MEANINGS = [
   ["red-rose", "Red rose", "Deep love", "/flowers/rose"],
   ["sunflower", "Sunflower", "Loyalty & warmth", "/flowers/sunflower"],
@@ -51,8 +67,19 @@ export default function Home() {
           </div>
           <div className="relative mx-auto w-full max-w-[440px]">
             <div className="absolute inset-x-6 top-10 bottom-4 -z-10 rounded-[40%] bg-petal/30 blur-3xl" aria-hidden />
-            <StaticBouquet design={presetDesign(HERO, 20260929)} label="Illustrated bouquet of peonies, roses and tulips wrapped in kraft paper" className="animate-float" />
-            <div className="absolute right-0 bottom-16 w-40 rotate-6 rounded-lg border-[1.5px] border-ink bg-paper p-3 shadow-[3px_3px_0_0_var(--color-ink)] sm:-right-4">
+            <StaticBouquet design={presetDesign(HERO, 20260929)} label="Illustrated bouquet of peonies, roses and tulips wrapped in kraft paper" className="animate-float" animated />
+            {/* Drifting petals and a few sparkles (CSS only; still for reduced motion). */}
+            <div aria-hidden className="pointer-events-none absolute inset-0">
+              {HERO_PETALS.map(([left, delay, dur, color], i) => (
+                <span key={i} className="pp-hero-petal absolute -top-4 block h-3.5 w-2.5 rounded-[60%_0_60%_0]" style={{ left: `${left}%`, background: color, animationDelay: `${delay}s`, animationDuration: `${dur}s` }} />
+              ))}
+              {HERO_SPARKLES.map(([left, top, delay], i) => (
+                <span key={i} className="pp-hero-sparkle absolute text-lg text-butter" style={{ left: `${left}%`, top: `${top}%`, animationDelay: `${delay}s` }}>
+                  ✦
+                </span>
+              ))}
+            </div>
+            <div className="pp-hero-note absolute right-0 bottom-16 w-40 rounded-lg border-[1.5px] border-ink bg-paper p-3 shadow-[3px_3px_0_0_var(--color-ink)] sm:-right-4">
               <p className="label">for you</p>
               <p className="mt-1 font-display text-lg leading-tight italic">&ldquo;saw these and thought of you&rdquo;</p>
             </div>
