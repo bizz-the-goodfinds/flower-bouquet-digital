@@ -268,13 +268,15 @@ function Sent() {
   const card = useBuilder((s) => s.card);
   const edited = useBuilder((s) => Boolean(s.editing));
   const url = `${window.location.origin}/b/${sent.slug}`;
+  const hasNote = Boolean(card.to || card.from || card.message);
   return (
-    <div className="mt-8 grid items-start gap-8 lg:grid-cols-2">
-      <div className="relative mx-auto w-full max-w-md">
+    // grid-cols-1 + min-w-0: the column is the screen width, so a long link can't widen the page (iOS Safari sizes auto columns to their content).
+    <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
+      <div className="relative mx-auto w-full max-w-md min-w-0">
         <BouquetSvg design={design} label="Your bouquet" className="h-auto w-full rounded-[1.5rem] ring-1 ring-line" />
-        <NoteCard to={card.to} from={card.from} message={card.message} style={card.style} className="mx-6 -mt-16 rotate-2" />
+        {hasNote && <NoteCard to={card.to} from={card.from} message={card.message} style={card.style} className="mx-6 -mt-16 rotate-2" />}
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="label">{edited ? "all fresh" : "sent with love"}</p>
         <h1 className="mt-2 font-display text-4xl leading-none sm:text-5xl">{edited ? "Changes saved 💐" : "Your bouquet is ready 💐"}</h1>
         <p className="mt-3 text-ink/75">
