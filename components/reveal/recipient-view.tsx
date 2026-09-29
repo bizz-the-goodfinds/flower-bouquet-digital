@@ -3,50 +3,174 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Clapperboard, Download, Film, Flag, Flower2 } from "lucide-react";
+import { Clapperboard, Download, Film, Flag, Flower2, History } from "lucide-react";
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
-import { NoteCard } from "@/components/bouquet/note-card";
 import { useExport } from "@/components/share/use-export";
 import { Logo } from "@/components/ui/logo";
 import { Tooltip } from "@/components/ui/tooltip";
 import { BACKGROUNDS } from "@/lib/bouquet/catalog";
-import { REACTIONS } from "@/lib/bouquet/card";
+import type { Conversation } from "@/lib/bouquet/chat";
 import { normalizeEnvelope } from "@/lib/bouquet/envelope";
-import { isMine } from "@/lib/local";
+import { addReceived, getReceived, isMine, viewerId } from "@/lib/local";
+import { MiniBloom } from "@/components/ui/bloom-loader";
 import { track } from "@/lib/analytics/track";
-import type { PublicBouquet } from "@/lib/server/bouquets";
+import type { PublicBouquet, ThreadItem } from "@/lib/server/bouquets";
+import { PreviewChat, RecipientChat, SenderChat } from "./chat";
+import { ChatDock } from "./chat-dock";
+import { NoteTag, OpenNote, PinnedNote } from "./note-pick";
+
+const PIN_KEY = "pp-note-pin-v1";
+/** The recipient's own pin choice for a bouquet, or null when they haven't chosen. */
+function readPinPref(slug: string): boolean | null {
+  try {
+    const v = (JSON.parse(localStorage.getItem(PIN_KEY) ?? "{}") as Record<string, boolean>)[slug];
+    return typeof v === "boolean" ? v : null;
+  } catch {
+    return null;
+  }
+}
+function writePinPref(slug: string, v: boolean) {
+  try {
+    const all = JSON.parse(localStorage.getItem(PIN_KEY) ?? "{}") as Record<string, boolean>;
+    all[slug] = v;
+    localStorage.setItem(PIN_KEY, JSON.stringify(all));
+  } catch {}
+}
+
+/** Chat height inside the dock: compact, and never taller than the screen allows. */
+const DOCK_CHAT_H = "h-[min(20rem,calc(100dvh-15rem))]";
 import { Envelope } from "./envelope";
+
+/** The sender's own preview (My bouquets): shows every recipient's chat and never counts as an open. */
+export type SenderPreview = { token: string | null; conversations: Conversation[]; refreshKey?: number; extra?: ReactNode };
 
 /**
  * The recipient's experience: envelope → unwrap → bloom → card, with actions in a top bar.
  * `preview` renders the exact same flow for the sender before sending (no tracking, no writes).
  */
-export function RecipientView({ bouquet, preview, previewActions }: { bouquet: PublicBouquet; preview?: boolean; previewActions?: ReactNode }) {
+export function RecipientView({
+  bouquet,
+  preview,
+  previewActions,
+  link = null,
+  thread = [],
+  sender,
+}: {
+  bouquet: PublicBouquet;
+  preview?: boolean;
+  previewActions?: ReactNode;
+  /** Personal link key this page was opened with. */
+  link?: string | null;
+  /** Earlier bouquets in the send-one-back chain, oldest first. */
+  thread?: ThreadItem[];
+  sender?: SenderPreview;
+}) {
   const [open, setOpen] = useState(false);
+  const [conversation, setConversation] = useState<string | null>(null);
+  const [mine, setMine] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteRead, setNoteRead] = useState(false);
+  // Sender's choice by default; the recipient can switch it and we remember that per bouquet.
+  const [pinned, setPinnedState] = useState(bouquet.style.note === "pinned");
+  // The sender opening their preview came to see chats: start with the dock open when there are any.
+  const [dock, setDock] = useState(() => Boolean(sender?.conversations.some((c) => c.messages.length)));
+  const [unread, setUnread] = useState(0);
   const shownAt = useRef(0);
   const reduce = useReducedMotion();
   const bg = BACKGROUNDS[bouquet.design.background] ?? BACKGROUNDS.cream;
   const dark = Boolean(bg.dark) && open;
   const exp = useExport({ design: bouquet.design, to: bouquet.to, from: bouquet.from, message: bouquet.message, style: bouquet.style }, "recipient");
+  const hasNote = Boolean(bouquet.to || bouquet.from || bouquet.message);
   const sendBack = `/create?replyTo=${bouquet.slug}${bouquet.from ? `&to=${encodeURIComponent(bouquet.from)}` : ""}`;
 
   useEffect(() => {
     shownAt.current = performance.now();
-    if (!preview) track("bouquet_viewed", { is_creator: isMine(bouquet.slug) });
+    if (preview) return;
+    const own = isMine(bouquet.slug);
+    track("bouquet_viewed", {
+      is_creator: own,
+      personal_link: Boolean(link),
+      occasion: bouquet.occasion ?? "none",
+      flower_count: bouquet.design.items.length,
+      source: new URLSearchParams(location.search).get("utm_source") ?? (document.referrer ? new URL(document.referrer).hostname : "direct"),
+    });
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setMine(own);
+      if (own) return;
+      // Our side of the chat: the personal link, else the chat this device already has, else this device.
+      const known = getReceived().find((e) => e.slug === bouquet.slug);
+      let conv = link ? `l:${link}` : (known?.conversation ?? `d:${viewerId()}`);
+      const res = await fetch(`/api/bouquets/${bouquet.slug}/receive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation: conv, link }),
+      }).catch(() => null);
+      const data = res?.ok ? ((await res.json()) as { conversation: string; own?: boolean }) : null;
+      if (cancelled) return;
+      if (data?.own) return setMine(true);
+      if (data?.conversation) conv = data.conversation;
+      setConversation(conv);
+      addReceived({ slug: bouquet.slug, link, conversation: conv, to: bouquet.to, from: bouquet.from, receivedAt: new Date().toISOString() });
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [bouquet.slug, bouquet.to, bouquet.from, bouquet.occasion, bouquet.design.items.length, preview, link]);
+
+  useEffect(() => {
+    if (preview) return;
+    const t = setTimeout(() => {
+      const pref = readPinPref(bouquet.slug);
+      if (pref !== null) setPinnedState(pref);
+    }, 0);
+    return () => clearTimeout(t);
   }, [bouquet.slug, preview]);
+
+  const setPinned = (v: boolean) => {
+    setPinnedState(v);
+    if (!preview) {
+      writePinPref(bouquet.slug, v);
+      track("note_pinned", { pinned: v });
+    }
+  };
+
+  // Pinned notes are read without a tap, so bring up the chat a little after the bloom instead.
+  useEffect(() => {
+    if (!open || !pinned || !hasNote || noteRead || mine || sender || preview) return;
+    const t = setTimeout(() => {
+      setNoteRead(true);
+      setDock(true);
+    }, 4200);
+    return () => clearTimeout(t);
+  }, [open, pinned, hasNote, noteRead, mine, sender, preview]);
 
   const unwrap = () => {
     setOpen(true);
     if (preview) return;
     track("bouquet_unwrapped", { time_to_unwrap_ms: Math.round(performance.now() - shownAt.current) });
-    if (!isMine(bouquet.slug)) fetch(`/api/bouquets/${bouquet.slug}/view`, { method: "POST", keepalive: true }).catch(() => {});
+    if (!isMine(bouquet.slug))
+      fetch(`/api/bouquets/${bouquet.slug}/view`, { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ link }) }).catch(() => {});
+  };
+
+  const openNote = () => {
+    setNoteOpen(true);
+    setDock(false);
+    if (!preview) track("note_opened", { first: !noteRead, pinned });
+  };
+  const closeNote = () => {
+    setNoteOpen(false);
+    // Just read it: that's the moment to react.
+    if (!noteRead && !mine && !sender) setTimeout(() => setDock(true), 450);
+    setNoteRead(true);
   };
 
   const iconBtn = `flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-40 ${dark ? "border-cream/30 text-cream hover:bg-cream/10" : "border-line bg-paper/80 text-ink hover:bg-paper"}`;
 
   return (
     <div
-      className={`relative flex min-h-dvh flex-col transition-colors duration-700 ${preview ? "min-h-full" : ""}`}
+      className={`relative flex flex-col transition-colors duration-700 ${open ? `${preview ? "h-[calc(100dvh-1.75rem)]" : "h-dvh"} overflow-hidden` : preview ? "min-h-full" : "min-h-dvh"}`}
       style={{ background: open ? bg.fill : "var(--color-cream)" }}
     >
       {/* Top bar: brand + actions, always reachable without scrolling */}
@@ -73,8 +197,11 @@ export function RecipientView({ bouquet, preview, previewActions }: { bouquet: P
                 ).map(([kind, label, short, Icon]) => (
                   <Tooltip key={kind} label={label} side="bottom">
                     <button className={iconBtn} aria-label={label} onClick={() => exp.run(kind)} disabled={exp.busy !== null}>
-                      {exp.busy === kind && kind !== "story" ? (
-                        <span className="font-mono text-[10px]">{Math.round(exp.progress * 100)}%</span>
+                      {exp.busy === kind ? (
+                        <span className="flex items-center gap-1 font-mono text-[10px]">
+                          <MiniBloom className="size-5" />
+                          {kind !== "story" && `${Math.round(exp.progress * 100)}%`}
+                        </span>
                       ) : (
                         <>
                           <Icon className="size-[18px]" aria-hidden />
@@ -112,33 +239,64 @@ export function RecipientView({ bouquet, preview, previewActions }: { bouquet: P
             key="open"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-4 px-4 pb-8 lg:grid-cols-[1.05fr_1fr] lg:gap-10 ${preview ? "" : "lg:h-[calc(100dvh-4.25rem)] lg:pb-4"}`}
+            className={`relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 pt-1 pb-20 sm:pb-6 ${pinned && hasNote ? "lg:flex-row lg:gap-12" : ""}`}
           >
             {!reduce && <PetalRain dark={Boolean(bg.dark)} />}
-            <div className="flex min-h-0 min-w-0 justify-center lg:h-full">
-              <BouquetSvg
-                design={bouquet.design}
-                bloom
-                showBackground={false}
-                label={`A bouquet for ${bouquet.to || "you"}`}
-                className="h-auto w-full max-w-[460px] lg:h-full lg:max-h-[calc(100dvh-6rem)] lg:w-auto lg:max-w-full"
-              />
+            {/* The bouquet owns the screen; the note is tucked into it like a florist card, or pinned beside it. */}
+            <div className={`relative aspect-[4/5] max-h-full max-w-full ${pinned && hasNote ? "h-[55%] shrink-0 lg:h-full" : "h-full"}`}>
+              <BouquetSvg design={bouquet.design} bloom showBackground={false} label={`A bouquet for ${bouquet.to || "you"}`} className="absolute inset-0 h-full w-full" />
+              {hasNote && !pinned && !noteOpen && <NoteTag note={bouquet} wrapper={bouquet.design.wrapper} hint={!noteRead} onOpen={openNote} delay={noteRead ? 0 : 1.5} />}
             </div>
-            <div className="relative z-10 flex min-h-0 min-w-0 flex-col justify-center gap-4 lg:max-h-full lg:overflow-y-auto lg:py-4">
-              {(bouquet.to || bouquet.from || bouquet.message) && (
-                <motion.div
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 60, rotate: 4 }}
-                  animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, rotate: -1.5 }}
-                  transition={{ delay: reduce ? 0.2 : 1.6, type: "spring", stiffness: 120, damping: 16 }}
-                  className="mx-auto w-full max-w-md px-2"
-                >
-                  <NoteCard to={bouquet.to} from={bouquet.from} message={bouquet.message} style={bouquet.style} />
-                </motion.div>
+            {hasNote && pinned && !noteOpen && (
+              <PinnedNote note={bouquet} onOpen={openNote} onUnpin={() => setPinned(false)} delay={noteRead ? 0 : 1.6} className="z-10 -mt-8 w-full max-w-md shrink lg:mt-0 lg:w-[26rem]" />
+            )}
+            <AnimatePresence>
+              {noteOpen && (
+                <OpenNote
+                  note={bouquet}
+                  pinned={pinned}
+                  onTogglePin={() => {
+                    setPinned(!pinned);
+                    closeNote();
+                  }}
+                  onClose={closeNote}
+                />
               )}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0.3 : 2.4 }} className="mx-auto w-full max-w-md">
-                <Respond bouquet={bouquet} dark={Boolean(bg.dark)} preview={preview} />
-              </motion.div>
-            </div>
+            </AnimatePresence>
+
+            <ChatDock
+              expanded={dock}
+              onToggle={(next) => {
+                setDock(next);
+                if (next) setUnread(0);
+                if (!preview) track("chat_toggled", { open: next, unread, is_creator: mine || Boolean(sender) });
+              }}
+              unread={unread}
+              label={sender ? "Reactions & chat" : preview ? "Their chat" : mine ? "Your bouquet" : `Chat with ${bouquet.from || "them"}`}
+            >
+              {sender ? (
+                <>
+                  <SenderChat slug={bouquet.slug} token={sender.token} to={bouquet.to} conversations={sender.conversations} refreshKey={sender.refreshKey} height={DOCK_CHAT_H} />
+                  {sender.extra}
+                </>
+              ) : preview ? (
+                <PreviewChat height={DOCK_CHAT_H} />
+              ) : mine ? (
+                <p className="rounded-2xl bg-cream px-4 py-3 text-sm">
+                  This is your bouquet 💐 See opens and chat with {bouquet.to || "them"} in{" "}
+                  <Link href="/garden" className="underline underline-offset-2">
+                    My bouquets
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <RecipientChat slug={bouquet.slug} conversation={conversation} from={bouquet.from} height={DOCK_CHAT_H} onIncoming={() => !dock && setUnread((n) => n + 1)} />
+              )}
+              {thread.length > 0 && <ThreadStrip thread={thread} dark={false} />}
+              <div className="px-1 pb-1 text-center">
+                <Footer slug={bouquet.slug} dark={false} hideReport={mine || Boolean(preview)} />
+              </div>
+            </ChatDock>
           </motion.div>
         )}
       </AnimatePresence>
@@ -146,79 +304,42 @@ export function RecipientView({ bouquet, preview, previewActions }: { bouquet: P
   );
 }
 
-function Respond({ bouquet, dark, preview }: { bouquet: PublicBouquet; dark: boolean; preview?: boolean }) {
-  const [picked, setPicked] = useState<string | null>(null);
-  const [reply, setReply] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+/** Earlier bouquets in this back-and-forth, so a reply reads like a thread. */
+function ThreadStrip({ thread, dark }: { thread: ThreadItem[]; dark: boolean }) {
+  return (
+    <div className={`rounded-[1.25rem] border px-3 py-3 text-left ${dark ? "border-cream/25 bg-cream/5 text-cream" : "border-line bg-paper/80 text-ink"}`}>
+      <p className="label flex items-center gap-1.5 !text-current opacity-70">
+        <History className="size-3.5" aria-hidden /> Earlier in this thread
+      </p>
+      <ol className="no-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1">
+        {thread.map((t) => (
+          <li key={t.slug} className="shrink-0">
+            <a href={`/b/${t.slug}`} className="flex w-28 flex-col items-center rounded-xl p-1.5 text-center transition hover:bg-ink/5">
+              <BouquetSvg design={t.design} className="h-20 w-auto" label={`Bouquet from ${t.from || "someone"}`} />
+              <span className="mt-1 w-full truncate text-xs font-medium" data-clarity-mask="true">
+                {t.from || "Someone"} → {t.to || "you"}
+              </span>
+              <span className="text-[11px] opacity-60">{new Date(t.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function Footer({ slug, dark, hideReport }: { slug: string; dark: boolean; hideReport: boolean }) {
   const [reported, setReported] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const mine = !preview && typeof window !== "undefined" && isMine(bouquet.slug);
-
-  const send = async () => {
-    if (!picked || preview) return;
-    setStatus("sending");
-    const res = await fetch("/api/reactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: bouquet.slug, emoji: picked, reply: reply || undefined }),
-    }).catch(() => null);
-    setStatus(res?.ok ? "sent" : "error");
-    if (res?.ok) track("reaction_sent", { emoji: picked, has_reply: Boolean(reply) });
-  };
-
   return (
-    <div className={`text-center ${dark ? "text-cream" : "text-ink"}`}>
-      {!mine && (
-        <div className="rounded-[1.25rem] border-[1.5px] border-ink bg-paper px-4 py-3 text-ink shadow-[3px_3px_0_0_var(--color-ink)]">
-          {status === "sent" ? (
-            <p className="font-display text-xl">
-              Sent {picked} {bouquet.from ? `to ${bouquet.from}` : ""}
-            </p>
-          ) : (
-            <>
-              <p className="text-sm font-medium">{preview ? "They can react here" : "How does it make you feel?"}</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-1" role="radiogroup" aria-label="Reaction">
-                {REACTIONS.map((r) => (
-                  <button
-                    key={r}
-                    role="radio"
-                    aria-checked={picked === r}
-                    onClick={() => setPicked(r)}
-                    className={`grid size-10 place-items-center rounded-full text-xl transition hover:scale-110 ${picked === r ? "scale-110 bg-petal/40 ring-2 ring-ink" : "bg-cream"}`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-              {picked && (
-                <div className="mt-2 flex gap-2">
-                  <input
-                    className="field !py-2"
-                    maxLength={280}
-                    placeholder={`Say something back${bouquet.from ? ` to ${bouquet.from}` : ""} (optional)`}
-                    value={reply}
-                    onChange={(e) => setReply(e.target.value)}
-                    data-clarity-mask="true"
-                    disabled={preview}
-                  />
-                  <button className="btn-primary !py-2" onClick={send} disabled={status === "sending" || preview}>
-                    Send
-                  </button>
-                </div>
-              )}
-              {status === "error" && <p className="mt-2 text-sm text-petal-deep">Couldn&rsquo;t send. Try again?</p>}
-            </>
-          )}
-        </div>
-      )}
-
-      <p className={`mt-3 text-xs ${dark ? "text-cream/60" : "text-ink-soft"}`}>
+    <div className={dark ? "text-cream" : "text-ink"}>
+      <p className={`text-xs ${dark ? "text-cream/60" : "text-ink-soft"}`}>
         Made with{" "}
         <Link href="/" className="underline underline-offset-2">
           Flower Bouquet Digital
         </Link>
-        {!mine && !preview && !reported && !reporting && (
-          <button className="ml-2 inline-flex min-h-9 items-center gap-1 underline underline-offset-2" onClick={() => setReporting(true)}>
+        {!hideReport && !reported && !reporting && (
+          <button className="ml-2 inline-flex min-h-9 items-center gap-1 underline underline-offset-2" data-track="report_opened" onClick={() => setReporting(true)}>
             <Flag className="size-3" aria-hidden /> Report
           </button>
         )}
@@ -230,7 +351,8 @@ function Respond({ bouquet, dark, preview }: { bouquet: PublicBouquet; dark: boo
           onSubmit={async (e) => {
             e.preventDefault();
             const reason = new FormData(e.currentTarget).get("reason") as string;
-            await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: bouquet.slug, reason }) }).catch(() => {});
+            track("bouquet_reported", { reason });
+            await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug, reason }) }).catch(() => {});
             setReported(true);
           }}
         >

@@ -1,17 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Clapperboard, Copy, Film, Image as ImageIcon, Mail, QrCode, Send, Smartphone } from "lucide-react";
+import { Check, ChevronDown, Clapperboard, Copy, Film, Image as ImageIcon, Mail, QrCode, Share, Smartphone } from "lucide-react";
 import type { Design } from "@/lib/bouquet/composition";
 import type { CardStyle } from "@/lib/bouquet/card";
-import { track } from "@/lib/analytics/track";
+import { track, withUtm } from "@/lib/analytics/track";
+import { MiniBloom } from "@/components/ui/bloom-loader";
+import { PersonalLinks } from "./personal-links";
 import { useExport, type ExportKind } from "./use-export";
 
-export function SharePanel({ url, to, from, design, message, style }: { url: string; to: string; from: string; design: Design; message: string; style: CardStyle }) {
+export function SharePanel({
+  url,
+  to,
+  from,
+  design,
+  message,
+  style,
+  personal,
+}: {
+  url: string;
+  to: string;
+  from: string;
+  design: Design;
+  message: string;
+  style: CardStyle;
+  /** Lets the sender make one link per recipient. */
+  personal?: { slug: string; token: string | null };
+}) {
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
+  const [moreWays, setMoreWays] = useState(false);
   const exp = useExport({ design, to, from, message, style }, "sender");
-  const text = to ? `${to}, I made you a bouquet 💐` : "I made you a bouquet 💐";
+  const text = to ? `${to}, I sealed something special for you 💌 Open it:` : "I sealed something special for you 💌 Open it:";
   const canNativeShare = typeof navigator !== "undefined" && "share" in navigator;
 
   const copy = async () => {
@@ -31,10 +51,10 @@ export function SharePanel({ url, to, from, design, message, style }: { url: str
   };
 
   const channels = [
-    { id: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}` },
-    { id: "telegram", label: "Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}` },
-    { id: "x", label: "X", href: `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}` },
-    { id: "sms", label: "Messages", href: `sms:?&body=${encodeURIComponent(`${text} ${url}`)}` },
+    { id: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${text} ${withUtm(url, "whatsapp")}`)}` },
+    { id: "telegram", label: "Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(withUtm(url, "telegram"))}&text=${encodeURIComponent(text)}` },
+    { id: "x", label: "X", href: `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(withUtm(url, "x"))}` },
+    { id: "sms", label: "Messages", href: `sms:?&body=${encodeURIComponent(`${text} ${withUtm(url, "sms")}`)}` },
   ];
 
   return (
@@ -49,40 +69,46 @@ export function SharePanel({ url, to, from, design, message, style }: { url: str
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {canNativeShare && (
-          <button
-            className="btn-secondary !py-2.5 text-sm"
-            onClick={async () => {
-              try {
-                await navigator.share({ title: "A bouquet for you", text, url });
-                track("share_clicked", { channel: "native" });
-              } catch {}
-            }}
-          >
-            <Send className="size-4" aria-hidden /> Share…
-          </button>
-        )}
-        {channels.map((c) => (
-          <a
-            key={c.id}
-            href={c.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => track("share_clicked", { channel: c.id })}
-            className="btn-secondary !py-2.5 text-sm"
-          >
-            {c.label}
-          </a>
-        ))}
-        <a
-          href={`mailto:?subject=${encodeURIComponent("A bouquet for you 💐")}&body=${encodeURIComponent(`${text}\n\n${url}`)}`}
-          onClick={() => track("share_clicked", { channel: "email" })}
-          className="btn-secondary !py-2.5 text-sm"
+      {canNativeShare && (
+        <button
+          className="btn-primary w-full !py-3.5 text-base"
+          onClick={async () => {
+            try {
+              await navigator.share({ title: "Something special for you 💌", text, url: withUtm(url, "native_share") });
+              track("share_clicked", { channel: "native" });
+            } catch {}
+          }}
         >
-          <Mail className="size-4" aria-hidden /> Email
-        </a>
-      </div>
+          <Share className="size-5" aria-hidden /> Share
+        </button>
+      )}
+      {canNativeShare && !moreWays ? (
+        <button type="button" className="mx-auto flex items-center gap-1 text-sm text-ink-soft underline-offset-2 hover:text-ink hover:underline" onClick={() => setMoreWays(true)}>
+          More ways to send <ChevronDown className="size-4" aria-hidden />
+        </button>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {channels.map((c) => (
+            <a
+              key={c.id}
+              href={c.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track("share_clicked", { channel: c.id })}
+              className="btn-secondary !py-2.5 text-sm"
+            >
+              {c.label}
+            </a>
+          ))}
+          <a
+            href={`mailto:?subject=${encodeURIComponent(to ? `${to}, something special is waiting for you 💌` : "Something special is waiting for you 💌")}&body=${encodeURIComponent(`${text}\n\n${withUtm(url, "email")}`)}`}
+            onClick={() => track("share_clicked", { channel: "email" })}
+            className="btn-secondary !py-2.5 text-sm"
+          >
+            <Mail className="size-4" aria-hidden /> Email
+          </a>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {(
@@ -100,7 +126,14 @@ export function SharePanel({ url, to, from, design, message, style }: { url: str
             disabled={exp.busy !== null}
           >
             <Icon className="size-5" aria-hidden />
-            {exp.busy === kind ? (kind === "video" || kind === "gif" ? `${Math.round(exp.progress * 100)}%` : "Saving…") : label}
+            {exp.busy === kind ? (
+              <span className="flex items-center gap-1">
+                <MiniBloom className="size-5" />
+                {kind === "video" || kind === "gif" ? `${Math.round(exp.progress * 100)}%` : "Saving…"}
+              </span>
+            ) : (
+              label
+            )}
           </button>
         ))}
         <button
@@ -108,7 +141,7 @@ export function SharePanel({ url, to, from, design, message, style }: { url: str
           onClick={async () => {
             if (qr) return setQr(null);
             const QR = await import("qrcode");
-            setQr(await QR.toDataURL(url, { margin: 1, width: 480, color: { dark: "#1B1A17", light: "#FFFDF8" } }));
+            setQr(await QR.toDataURL(withUtm(url, "qr"), { margin: 1, width: 480, color: { dark: "#1B1A17", light: "#FFFDF8" } }));
             track("share_clicked", { channel: "qr" });
           }}
         >
@@ -116,6 +149,7 @@ export function SharePanel({ url, to, from, design, message, style }: { url: str
           {qr ? "Hide QR" : "QR code"}
         </button>
       </div>
+      {personal && <PersonalLinks slug={personal.slug} token={personal.token} links={[]} />}
       {exp.error && (
         <p role="alert" className="text-sm text-petal-deep">
           {exp.error}

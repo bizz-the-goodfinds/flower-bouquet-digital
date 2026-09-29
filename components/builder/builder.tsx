@@ -7,6 +7,7 @@ import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { NoteCard } from "@/components/bouquet/note-card";
 import { SharePanel } from "@/components/share/share-panel";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { BloomLoader } from "@/components/ui/bloom-loader";
 import { Tooltip } from "@/components/ui/tooltip";
 import { BuilderCanvas } from "./canvas";
 import { CardStep } from "./card-step";
@@ -129,7 +130,7 @@ export function Builder({ params }: { params: BuilderParams }) {
     return (
       <div className="mx-auto grid min-h-[60dvh] max-w-md place-items-center px-4 text-center">
         {editState === "loading" ? (
-          <p className="animate-pulse font-display text-3xl">Unwrapping your bouquet…</p>
+          <BloomLoader label="Unwrapping your bouquet…" />
         ) : (
           <div>
             <p className="font-display text-3xl">Can&rsquo;t edit this bouquet</p>
@@ -277,20 +278,20 @@ function Sent() {
         <p className="label">{edited ? "all fresh" : "sent with love"}</p>
         <h1 className="mt-2 font-display text-4xl leading-none sm:text-5xl">{edited ? "Changes saved 💐" : "Your bouquet is ready 💐"}</h1>
         <p className="mt-3 text-ink/75">
-          Send this link to {card.to || "them"}. It&rsquo;s private: only people with the link can open it. You can see opens and reactions in{" "}
+          Send this link to {card.to || "them"}. Their preview shows only your sealed envelope, so the flowers stay a surprise. It&rsquo;s private: only people with the link can open it. See opens and chat with them in{" "}
           <Link href="/garden" className="underline underline-offset-2">
             My bouquets
           </Link>
           .
         </p>
         <div className="mt-6">
-          <SharePanel url={url} to={card.to} from={card.from} design={design} message={card.message} style={card.style} />
+          <SharePanel url={url} to={card.to} from={card.from} design={design} message={card.message} style={card.style} personal={{ slug: sent.slug, token: sent.token || null }} />
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
-          <a href={`/b/${sent.slug}`} target="_blank" rel="noopener" className="btn-ghost border border-line">
-            <Eye className="size-4" aria-hidden /> Preview it
-          </a>
-          <button type="button" className="btn-ghost border border-line" onClick={() => useBuilder.getState().reset()}>
+          <Link href="/garden" className="btn-ghost border border-line">
+            <Eye className="size-4" aria-hidden /> Preview in My bouquets
+          </Link>
+          <button type="button" className="btn-ghost border border-line" data-track="make_another_clicked" onClick={() => useBuilder.getState().reset()}>
             <RotateCcw className="size-4" aria-hidden /> Make another
           </button>
         </div>

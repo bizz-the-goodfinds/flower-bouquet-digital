@@ -236,7 +236,8 @@ export const sprigs = {
 
 // ---------- Wraps: a shape (type) × a paper (colour/print) ----------
 
-export type Paper = { paper: string; shade: string; edge: string; print?: "news" | "dots" };
+export type PaperPrint = "news" | "dots" | "stripes" | "hearts" | "gingham" | "stars";
+export type Paper = { paper: string; shade: string; edge: string; print?: PaperPrint };
 
 type Box = { x1: number; y1: number; x2: number; y2: number };
 
@@ -262,6 +263,22 @@ function print(p: Paper, box: Box) {
       out += `<path d="M${box.x1} ${y} L${f(mid - 8)} ${y} M${f(mid + 8)} ${y} L${box.x2} ${y}" stroke="#8C857A" stroke-width="3" opacity=".45"/>`;
     }
     out += `<path d="M${box.x1} ${box.y1 + 30} L${box.x2} ${box.y1 + 30}" stroke="#5C564E" stroke-width="7" opacity=".5"/>`;
+  } else if (p.print === "stripes") {
+    const h = box.y2 - box.y1;
+    for (let x = box.x1 - h; x <= box.x2; x += 44) out += `<path d="M${x} ${box.y2} L${x + h} ${box.y1}" stroke="${p.edge}" stroke-width="13" opacity=".5"/>`;
+  } else if (p.print === "hearts") {
+    for (let y = box.y1 + 34, row = 0; y <= box.y2; y += 50, row++)
+      for (let x = box.x1 + 10; x <= box.x2; x += 50)
+        out += `<path d="M${x + (row % 2) * 25} ${y + 8} c-11 -8 -15 -17 -8 -22 c4 -3 8 -1 8 3 c0 -4 4 -6 8 -3 c7 5 3 14 -8 22z" fill="${p.edge}" opacity=".6"/>`;
+  } else if (p.print === "gingham") {
+    for (let x = box.x1; x <= box.x2; x += 44) out += `<rect x="${x}" y="${box.y1}" width="22" height="${box.y2 - box.y1}" fill="${p.edge}" opacity=".22"/>`;
+    for (let y = box.y1; y <= box.y2; y += 44) out += `<rect x="${box.x1}" y="${y}" width="${box.x2 - box.x1}" height="22" fill="${p.edge}" opacity=".22"/>`;
+  } else if (p.print === "stars") {
+    for (let y = box.y1 + 40, row = 0; y <= box.y2; y += 56, row++)
+      for (let x = box.x1 + 16; x <= box.x2; x += 56) {
+        const cx = x + (row % 2) * 28;
+        out += `<path d="M${cx} ${y - 9} L${cx + 3} ${y - 3} L${cx + 9} ${y} L${cx + 3} ${y + 3} L${cx} ${y + 9} L${cx - 3} ${y + 3} L${cx - 9} ${y} L${cx - 3} ${y - 3}Z" fill="${p.edge}" opacity=".75"/>`;
+      }
   } else {
     for (let y = box.y1 + 40, row = 0; y <= box.y2; y += 38, row++)
       for (let x = box.x1; x <= box.x2; x += 38) out += `<circle cx="${x + (row % 2) * 19}" cy="${y}" r="4.5" fill="${p.edge}" opacity=".55"/>`;
@@ -341,6 +358,54 @@ export const WRAP_SHAPES: Record<string, WrapShape> = {
       `<path d="M404 745 C404 768 596 768 596 745" fill="none" ${S}/>`,
     band: "M404 772 C404 792 596 792 596 772 L598 802 C598 822 402 822 402 802Z",
     bow: { x: 500, y: 798, s: 0.72 },
+  },
+  layered: {
+    name: "Layered wrap",
+    tie: { x: 500, y: 930 },
+    back: (p) =>
+      `<path d="M120 520 L232 330 L362 420 L500 300 L638 420 L768 330 L880 520 L580 1010 L420 1010Z" fill="${p.paper}" ${S}/>` +
+      `<path d="M190 560 L300 418 L420 470 L500 398 L580 470 L700 418 L810 560 L560 990 L440 990Z" fill="#FFFDF8" opacity=".85" ${S}/>` +
+      `<path d="M260 560 L500 470 L740 560" fill="none" stroke="${p.shade}" stroke-width="2" opacity=".6"/>`,
+    frontPath: "M200 700 C330 760 670 760 800 700 L590 1185 C530 1200 470 1200 410 1185Z",
+    frontBox: { x1: 205, y1: 705, x2: 795, y2: 1195 },
+    frontExtras: (p) =>
+      `<path d="M200 700 C280 736 370 752 450 758 L520 1198 C480 1198 440 1194 410 1185Z" fill="${p.shade}" opacity=".5" ${S}/>` +
+      `<path d="M800 700 C720 740 620 760 540 764 L600 1180 L590 1185Z" fill="#FFFDF8" opacity=".35" ${S}/>` +
+      `<path d="M300 780 L450 1150 M720 790 L585 1150" stroke="${p.edge}" stroke-width="2" opacity=".45" fill="none"/>`,
+    band: "M322 915 Q500 948 678 915 L669 953 Q500 986 331 953Z",
+    bow: { x: 500, y: 933, s: 1 },
+  },
+  basket: {
+    name: "Basket",
+    tie: { x: 500, y: 880 },
+    back: (p) =>
+      `<path d="M262 800 C250 330 750 330 738 800" fill="none" stroke="${INK}" stroke-width="30" stroke-linecap="round"/>` +
+      `<path d="M262 800 C250 330 750 330 738 800" fill="none" stroke="${p.shade}" stroke-width="22" stroke-linecap="round"/>` +
+      `<ellipse cx="500" cy="800" rx="258" ry="52" fill="${p.shade}" ${S}/>` +
+      `<ellipse cx="500" cy="810" rx="232" ry="38" fill="#000" opacity=".18"/>`,
+    frontPath: "M242 800 C242 856 758 856 758 800 L712 1122 C700 1172 300 1172 288 1122Z",
+    frontBox: { x1: 242, y1: 800, x2: 758, y2: 1172 },
+    frontExtras: (p) =>
+      [880, 950, 1020, 1090].map((y) => `<path d="M230 ${y} Q500 ${y + 34} 770 ${y}" stroke="${p.edge}" stroke-width="3" fill="none" opacity=".6"/>`).join("") +
+      [290, 350, 410, 470, 530, 590, 650, 710].map((x) => `<path d="M${x} 830 L${f(x + (500 - x) * 0.09)} 1170" stroke="${p.edge}" stroke-width="3" opacity=".5"/>`).join("") +
+      `<path d="M242 800 C242 856 758 856 758 800" fill="none" stroke="${p.shade}" stroke-width="20"/>` +
+      `<path d="M242 800 C242 856 280 900 300 1150 L288 1122Z" fill="${p.shade}" opacity=".4"/>`,
+    band: "M246 834 C300 876 700 876 754 834 L750 872 C700 914 300 914 250 872Z",
+    bow: { x: 500, y: 872, s: 0.85 },
+  },
+  jar: {
+    name: "Mason jar",
+    tie: { x: 500, y: 850 },
+    back: (p) => `<ellipse cx="500" cy="760" rx="140" ry="20" fill="${p.shade}" ${S}/>`,
+    frontPath:
+      "M360 760 L640 760 L640 800 C700 820 720 860 720 920 L720 1120 C720 1165 690 1180 650 1180 L350 1180 C310 1180 280 1165 280 1120 L280 920 C280 860 300 820 360 800Z",
+    frontBox: { x1: 280, y1: 760, x2: 720, y2: 1180 },
+    frontExtras: (p) =>
+      `<path d="M640 800 C700 820 720 860 720 920 L720 1120 C720 1165 690 1180 650 1180 L600 1180 C660 1150 670 1100 670 1060 L670 930 C670 870 650 830 600 810Z" fill="${p.shade}" opacity=".45"/>` +
+      `<path d="M322 900 C308 980 310 1060 330 1122" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" opacity=".5"/>` +
+      `<path d="M360 772 L640 772 M360 786 L640 786" stroke="${p.edge}" stroke-width="3" opacity=".7"/>`,
+    band: "M358 792 L642 792 L642 822 L358 822Z",
+    bow: { x: 500, y: 806, s: 0.7 },
   },
 };
 

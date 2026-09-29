@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { StemThumbClient } from "@/components/bouquet/stem-thumb";
-import { WRAP_SHAPES, ribbonMarkup, wrapBack, wrapFront } from "@/lib/bouquet/art";
+import { WRAP_SHAPES, ribbonMarkup, wrapBack, wrapFront, type Paper } from "@/lib/bouquet/art";
 import { BACKGROUNDS, PAPERS, RIBBONS, STEMS } from "@/lib/bouquet/catalog";
 import { MAX_STEMS } from "@/lib/bouquet/composition";
 import { useBuilder } from "@/lib/bouquet/store";
@@ -77,7 +77,7 @@ export function Tray({ className = "" }: { className?: string }) {
         )}
 
         {tab === "wrap" && (
-          <div role="radiogroup" aria-label="Wrap style" className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-3">
+          <div role="radiogroup" aria-label="Wrap style" className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3">
             {Object.entries(WRAP_SHAPES).map(([k, sh]) => {
               const paper = PAPERS[design.paper] ?? PAPERS.kraft;
               const rib = RIBBONS[design.ribbon] ?? RIBBONS.cherry;
@@ -107,7 +107,7 @@ export function Tray({ className = "" }: { className?: string }) {
         )}
         {tab === "paper" && (
           <Swatches
-            options={Object.entries(PAPERS).map(([k, w]) => ({ key: k, name: w.name, fill: w.paper, ring: w.shade, dots: w.print === "dots" ? w.edge : undefined, lines: w.print === "news" }))}
+            options={Object.entries(PAPERS).map(([k, w]) => ({ key: k, name: w.name, fill: w.paper, ring: w.shade, pattern: printSwatch(w) }))}
             value={design.paper}
             onPick={(k) => commit((d) => ({ ...d, paper: k }))}
           />
@@ -131,12 +131,33 @@ export function Tray({ className = "" }: { className?: string }) {
   );
 }
 
+/** CSS approximation of a paper print for its round swatch. */
+function printSwatch(p: Paper) {
+  const e = p.edge;
+  switch (p.print) {
+    case "dots":
+      return `radial-gradient(${e} 22%, transparent 26%) 0 0 / 10px 10px`;
+    case "news":
+      return "repeating-linear-gradient(0deg, transparent 0 5px, #8C857A55 5px 6px)";
+    case "stripes":
+      return `repeating-linear-gradient(45deg, ${e}88 0 4px, transparent 4px 10px)`;
+    case "gingham":
+      return `repeating-linear-gradient(0deg, ${e}40 0 5px, transparent 5px 10px), repeating-linear-gradient(90deg, ${e}40 0 5px, transparent 5px 10px)`;
+    case "hearts":
+      return `radial-gradient(${e} 18%, transparent 24%) 0 0 / 12px 12px`;
+    case "stars":
+      return `radial-gradient(${e} 10%, transparent 16%) 0 0 / 9px 9px, radial-gradient(${e} 8%, transparent 14%) 4px 5px / 11px 11px`;
+    default:
+      return undefined;
+  }
+}
+
 function Swatches({
   options,
   value,
   onPick,
 }: {
-  options: { key: string; name: string; fill: string; ring: string; dots?: string; lines?: boolean }[];
+  options: { key: string; name: string; fill: string; ring: string; pattern?: string }[];
   value: string;
   onPick: (k: string) => void;
 }) {
@@ -153,11 +174,7 @@ function Swatches({
           <span
             className={`block size-12 rounded-full border-2 transition ${value === o.key ? "scale-110 border-ink shadow-[2px_2px_0_0_var(--color-ink)]" : "border-transparent"}`}
             style={{
-              background: [
-                o.dots ? `radial-gradient(${o.dots} 22%, transparent 26%) 0 0 / 10px 10px` : "",
-                o.lines ? `repeating-linear-gradient(0deg, transparent 0 5px, #8C857A55 5px 6px)` : "",
-                `radial-gradient(circle at 35% 30%, ${o.fill} 55%, ${o.ring})`,
-              ]
+              background: [o.pattern ?? "", `radial-gradient(circle at 35% 30%, ${o.fill} 55%, ${o.ring})`]
                 .filter(Boolean)
                 .join(", "),
             }}

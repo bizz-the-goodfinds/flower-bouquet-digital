@@ -1,6 +1,6 @@
 # Flower Bouquet Digital — Product & Build Plan
 
-Status (2026-09-29): v1 is built. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
+Status (2026-09-30): v1 is built; v1.1 (envelope link previews, chat, threads, received bouquets, personal links, more wraps) is in progress. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
 
 ---
 
@@ -87,7 +87,7 @@ Every received bouquet is an ad for the product. The "send one back" button is t
 
 | Layer | Choice | Why |
 |---|---|---|
-| Framework | Next.js 15 (App Router, React 19, TypeScript) | SSG/SSR for SEO, route handlers, OG image generation, best on Vercel |
+| Framework | Next.js 16 (App Router, Turbopack, React 19, TypeScript) | SSG/SSR for SEO, route handlers, OG image generation, best on Vercel |
 | Styling | Tailwind CSS v4 + CSS variables for tokens | Fast, themeable |
 | Animation | Motion (Framer Motion) | Unwrap / bloom / card flip |
 | Builder canvas | SVG + pointer events (custom), `@use-gesture/react` for pinch/rotate | Crisp at any size, easy PNG export, light bundle vs Konva |
@@ -285,6 +285,7 @@ Realistic goal: Lighthouse 100/100/100/100 on landing and content pages, all Cor
 - `FAQPage` on FAQ and occasion pages.
 - `HowTo` on "How to send a digital bouquet".
 - `Article` + `BreadcrumbList` on guides and flower pages.
+- `CollectionPage` + `ItemList` on the occasions, flowers and guides hubs; `AboutPage` on About.
 
 ### AEO (answer engines: Google AI Overviews, featured snippets, voice)
 - Every content page opens with a 40–60 word direct answer, then detail.
@@ -302,32 +303,71 @@ Realistic goal: Lighthouse 100/100/100/100 on landing and content pages, all Cor
 ### Content plan at launch
 - ~25 flower meaning pages, ~12 occasion pages, ~8 guides, FAQ. All written for humans first, with presets that link straight into the builder.
 
+### Status (2026-09-30)
+Local production build, Lighthouse 12:
+
+| | Mobile | Desktop |
+|---|---|---|
+| Accessibility | 100 | 100 |
+| Best practices | 100 | 100 |
+| SEO | 100 | 100 |
+| Performance | 92–94 (`/create` 85) | 99–100 |
+
+- **Done:**
+  - Every structured-data type above except SearchAction (there's no site search yet).
+  - A direct answer at the top of every content page, and FAQ schema on the home, FAQ, occasion, flower and guide pages.
+  - `robots.txt` welcomes AI crawlers, and `llms.txt` + `llms-full.txt` are generated from the content files.
+  - The same one-sentence product definition (`site.definition`) is used everywhere.
+- **Mobile performance gap:** Lighthouse's slow-4G simulation counts the framework JavaScript, which caps the score. The real LCP is about 150ms. Getting to 100 would mean cutting React/Next runtime code, which isn't worth it. The builder is heavy on purpose.
+- **Not 100 on purpose:** `/garden` is private (noindex), so its SEO score stays low by design.
+- **Still open:**
+  - Submit the sitemap to Search Console and Bing.
+  - Directory listings (Product Hunt and similar).
+  - A citable "most sent flowers" stat from our own anonymized data.
+  - Rankings and AI citations depend on content and backlinks over time; code can't guarantee them.
+
 ---
 
 ## 9. Analytics & tracking
 
-- **Microsoft Clarity**: heatmaps + session replays. Note text and names masked (`data-clarity-mask`) — private messages must never be recorded.
-- **Firebase Analytics (GA4)**: funnels and retention.
-- **Vercel Speed Insights + Analytics**: real-user Web Vitals.
-- Cookie / consent banner (Google Consent Mode v2) — required if you have EU/UK users; recommended for India DPDP too.
+- **Microsoft Clarity:** heatmaps and session replays. Note text and names are masked (`data-clarity-mask`); private messages must never be recorded.
+- **Firebase Analytics (GA4):** funnels, retention and traffic sources.
+- **Vercel Speed Insights + Analytics:** real-user Web Vitals (rendered only on Vercel).
 
-Event taxonomy:
+### Loading and consent (built)
+- **EU/UK (detected by timezone):** opt-in banner. Nothing loads until the visitor accepts.
+- **Elsewhere:** a notice with opt-out.
+  - GA uses first-party cookies and starts about 2s after page load, so visitors who never interact are still counted.
+  - Clarity sets third-party cookies, so it waits for the first tap, scroll or key.
+- Crawlers and automated browsers are skipped.
+- Events fired before analytics load are queued.
 
-| Event | Key params |
-|---|---|
-| `builder_opened` | source (landing, preset, send_back, direct) |
-| `preset_selected` | occasion |
-| `flower_added` | flower_slug, count |
-| `shuffle_used` | — |
-| `note_written` | length_bucket, font |
-| `bouquet_created` | flower_count, occasion, has_reveal_at |
-| `share_clicked` | channel (native, whatsapp, copy, qr) |
-| `image_downloaded` | format (square, story) |
-| `bouquet_viewed` | is_creator |
-| `bouquet_unwrapped` | time_to_unwrap_ms |
-| `reaction_sent` | emoji |
-| `send_back_clicked` | — |
-| `signup_completed` | method |
+### What is tracked (built)
+The full event and parameter reference is in README.md → Analytics. In short:
+- **Automatic, site-wide** (`components/analytics/listeners.tsx`): `cta_clicked` (with placement: hero, header, footer, section), `nav_clicked`, `select_content` (occasion, flower or guide opened), `faq_opened`, `mobile_menu_opened`, `web_vitals`, `page_not_found`. Any element can be tracked by adding `data-track="event"` and `data-track-*` params.
+- **Builder funnel:** opened, preset, flowers added/removed, wrap, shuffle, undo/redo, step changes, message ideas, preview, send failures, captcha failures.
+  - `bouquet_created` carries every design choice (template, font, note mode, envelope, stickers, expiry, wrap, reveal, reply, message length).
+- **Sharing:** channel clicks, personal links created/deleted, downloads and export failures.
+- **Recipient:** viewed (with source, occasion, personal link), locked view, unwrapped, note opened/pinned, chat toggled, reactions, replies, send-back, reports.
+- **My bouquets:** tabs, previews, deletes, claims, sign-in/sign-up (including failures), password resets, sync prompt.
+
+### Traffic attribution (built)
+- Share links carry `utm_source=<channel>&utm_medium=share`.
+  - Channels: whatsapp, telegram, x, sms, email, native_share, qr.
+  - Without these tags, opens from in-app browsers (which send no referrer) would show as "direct".
+- The copy-link URL stays clean.
+
+### GA4 admin (to do once)
+- Register `placement`, `occasion`, `source`, `channel`, `flower_slug`, `metric_name` and `content_type` as custom dimensions.
+- Mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events.
+- Keep Enhanced measurement → "Page changes based on browser history events" on.
+
+### Questions the data should answer
+- Where do bouquets get lost? The drop-off from `builder_opened` → `builder_step: card` → `preview_opened` → `bouquet_created`.
+- Which options and presets lead to sent bouquets?
+- Which share channel brings the most opens? `bouquet_viewed.source` shows this.
+- How many recipients unwrap, react or send one back?
+- Which landing sections and content pages drive `cta_clicked`?
 
 North-star metric: **bouquets opened per week**. Viral coefficient = send-back bouquets created ÷ bouquets opened.
 
@@ -427,10 +467,10 @@ See the checklist in the chat reply / below.
 
 ---
 
-## 15. Build status (updated 2026-09-29)
+## 15. Build status (updated 2026-09-30)
 
 ### Done
-- Builder: 31 flowers/fillers + 4 greenery, 5 wrap shapes (cone, tissue wrap, sleeve, hat box, vase) × 12 papers, 7 ribbons, 7 backgrounds; drag, pinch/rotate, keyboard, undo/redo, shuffle, surprise, occasion presets; picker order Wrap → Wrap colour → Flowers → Fillers & greens → Ribbon → Background; clickable steps; tooltips; fits one screen on every size.
+- Builder: 31 flowers/fillers + 4 greenery, 8 wrap shapes (cone, tissue wrap, sleeve, hat box, vase, layered, basket, mason jar) × 20 papers, 14 ribbons, 14 backgrounds; drag, pinch/rotate, keyboard, undo/redo, shuffle, surprise, occasion presets; picker order Wrap → Wrap colour → Flowers → Fillers & greens → Ribbon → Background; clickable steps; tooltips; fits one screen on every size.
 - Card: 6 templates, 6 letter fonts (Playfair Display, Handlee, Playwrite CA Guides, Cutive Mono, Sacramento, Bitcount Single), 18 stickers, envelope colour/seal/liner, scheduled reveal, link expiry; live bouquet + card preview.
 - Preview before sending: full-screen replay of exactly what the recipient sees, with Keep editing / Replay / Send at the top.
 - Sharing: short link, dynamic OG image per bouquet (and per occasion/flower/guide page), WhatsApp/Telegram/X/SMS/email/native share, QR, PNG post + 9:16 story, MP4/WebM video and GIF of the full opening (envelope → bloom → card).
@@ -442,7 +482,39 @@ See the checklist in the chat reply / below.
 - Error pages (404, bouquet not found, error boundary, global error), privacy policy and terms updated.
 - QA: overflow checks on every page at 9 widths, CTA visibility at 10 viewports, Lighthouse CI in GitHub Actions.
 
+### v1.1 (2026-09-30)
+- Link previews tease instead of spoil: the OG image is the sender's own envelope (from the Write step) with "from X / break the seal" copy; share texts updated to match.
+- Video/GIF: the first frame is the sender's envelope (no more blank/black cover), the petal rain from the recipient page is baked in, and every frame (and PNG) carries a logo + wordmark pill.
+- Loaders: bouquet-themed loader (flowers bloom into a little cone) for route loading and edits, flower spinner in buttons, petal-shimmer skeletons in My bouquets.
+- Received bouquets: opening someone's bouquet adds it to My bouquets → Received (device, or account when signed in).
+- Chat: reactions became a chat between the sender and each recipient, themed like the note cards; the sender replies from their preview.
+- Threads: "send one back" chains share a thread; My bouquets groups them into one connected row; the recipient page shows "Earlier in this thread".
+- Several recipients: personal links per person (their name on the envelope, their own opens and chat).
+- My bouquets cards show a one-line summary ("Sam and 2 others reacted ❤️", new badge) instead of the full reactions; "Preview" replays the bouquet without counting an open.
+- Opened bouquet is bouquet-first and fits one screen: the note is a florist card tucked into the bouquet (tap: it flies out and unfolds; "Tuck it back" returns it), and chat, thread and extras live in a small floating dock that can be hidden (unread badge; opens itself after the note is first read).
+- Note display is a preference: the sender picks "Tucked in" (florist card in the bouquet, tap to open) or "Pinned" (always shown beside the bouquet) on the Write step; the recipient can pin/unpin it themselves (remembered per bouquet). Video and GIF follow the sender's choice: pinned slides the card up under the bouquet, tucked shows the card on its pick, then flies it out and unfolds it.
+- Catalog: 3 new wraps (layered, basket, mason jar) = 8; 8 new papers incl. stripes, hearts, gingham and starry prints = 20; 7 new ribbons = 14; 7 new backgrounds incl. 3 dark = 14.
+- Needs: run migration `0004_threads_chat_links.sql` before deploying (the recipient page reads the new columns).
+
+### v1.2 (2026-09-30): analytics, SEO and mobile polish
+- **Analytics.** GA starts about 2s after load, so visitors who bounce are counted. Clarity still waits for an interaction, and bots are skipped.
+  - Site-wide auto-tracking: CTA, nav and content clicks, FAQ opens, the mobile menu, Web Vitals and 404s. Any element can be tracked with `data-track` attributes.
+  - Funnel events across the builder, sharing, the recipient view and My bouquets.
+  - `bouquet_created` records every design choice.
+  - Share links are UTM-tagged per channel.
+- **SEO/AEO/GEO.**
+  - CollectionPage/ItemList schema on the hubs and AboutPage on About.
+  - Fixed the FAQ heading order, the logo's accessible name and a double period in llms.txt.
+  - Vercel scripts render only on Vercel.
+  - Lighthouse: accessibility, best practices and SEO are 100 on every public page. Performance is 99–100 on desktop and 92–94 on mobile.
+- **Mobile/tablet.**
+  - Footer links and breadcrumbs meet the 24px tap-target minimum, with a two-column footer on phones.
+  - Occasion flower descriptions no longer cut off mid-word.
+  - No overflow at 360, 768 or 1024px.
+- **Privacy policy** updated for GA load timing and UTM tags.
+
 ### Remaining (needs you or a decision)
+- GA4 admin: register the event params as custom dimensions, mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events, and keep history-based page views on (see README → Analytics).
 - Vercel: attach `flower-bouquet-digital.vercel.app` to the project, turn off Deployment Protection for Production, set env vars.
 - Supabase: add `/auth/callback` redirect URLs; add custom SMTP (e.g. Resend) so password-reset emails are branded and not rate-limited.
 - Rotate the database password and service-role key that were shared in chat.

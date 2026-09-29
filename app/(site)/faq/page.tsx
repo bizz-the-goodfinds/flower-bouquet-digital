@@ -18,7 +18,7 @@ export default function FaqPage() {
       <JsonLd data={faqLd(ALL)} />
       <Breadcrumbs items={[{ name: "FAQ", path: "/faq" }]} />
       <h1 className="mt-6 font-display text-5xl sm:text-6xl">Frequently asked questions</h1>
-      <FaqList items={ALL} className="mt-8" />
+      <FaqList items={ALL} className="mt-8" level={2} />
     </div>
   );
 }

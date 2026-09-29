@@ -24,7 +24,7 @@ export const GUIDES: Guide[] = [
     howTo: [
       { name: "Open the bouquet maker", text: "Go to the Flower Bouquet Digital maker or pick an occasion preset to start with a ready-made bouquet." },
       { name: "Add and arrange flowers", text: "Tap flowers and greenery to add them. Drag to move, pinch or use the toolbar to resize and rotate, or tap Shuffle to auto-arrange." },
-      { name: "Choose wrapper, ribbon and background", text: "Pick a paper wrap, a ribbon color and a background that fits the mood." },
+      { name: "Choose wrapper, ribbon and background", text: "Pick a wrap (cone, tissue, layered, sleeve, basket, hat box, vase or mason jar), a paper color or print, a ribbon and a background that fits the mood." },
       { name: "Write your card", text: "Add who it is for, who it is from, and a message. Pick a handwriting style. Optionally set a date and time for it to open." },
       { name: "Send the link", text: "Tap Send to get your link. Share it on WhatsApp, Instagram, iMessage, email, or download it as an image or story." },
     ],
@@ -57,7 +57,8 @@ export const GUIDES: Guide[] = [
       { q: "Is Flower Bouquet Digital free?", a: "Yes, completely free. No account or app is needed to send or open a bouquet." },
       { q: "Does the recipient need an app?", a: "No. The bouquet opens in any mobile or desktop browser." },
       { q: "Can I schedule a bouquet?", a: "Yes. Set an open date and time on the card; the link shows a countdown until then." },
-      { q: "Can I delete a bouquet after sending?", a: "Yes. From the My bouquets page on the same device, you can delete any bouquet you sent." },
+      { q: "Can I delete a bouquet after sending?", a: "Yes. From the My bouquets page on the same device (or on any device while signed in), you can delete any bouquet you sent." },
+      { q: "Does the link preview spoil the surprise?", a: "No. When you paste the link into WhatsApp, iMessage or Instagram, the preview shows only your sealed envelope and who it's from. The flowers stay hidden until they tap to open it." },
     ],
   },
   {
@@ -140,6 +141,10 @@ export const SITE_FAQ: { q: string; a: string }[] = [
   { q: "Can I schedule a bouquet for a specific time?", a: "Yes. Set an open date and time and the link will show a countdown until the bouquet blooms." },
   { q: "Can I share it on Instagram or WhatsApp?", a: "Yes. Share the link directly to WhatsApp or any app, or download a square image or a 9:16 story image for Instagram and TikTok." },
   { q: "Is my message private?", a: "Bouquet links are unlisted and hidden from search engines. Only people with the link can see it, and you can delete it any time from the same device." },
-  { q: "Can the recipient reply?", a: "Yes. They can react with an emoji, leave a short reply and send a bouquet back with one tap." },
-  { q: "Do I need to sign up?", a: "No. Your sent bouquets are saved on your device under My bouquets." },
+  { q: "Can the recipient reply?", a: "Yes. They can react with an emoji and chat with you right under the bouquet, and send a bouquet back with one tap. You see their reactions and can reply from My bouquets." },
+  { q: "Can I send one bouquet to several people?", a: "Yes. Create a personal link for each person. Each one sees their own name on the envelope, and you see who opened it and chat with each person separately." },
+  { q: "Where do bouquets I receive go?", a: "Once you open a bouquet, it appears under My bouquets → Received, with your chat and a Send one back button. Sign in to see them on every device." },
+  { q: "Can I preview my bouquet without it counting as opened?", a: "Yes. Tap Preview in My bouquets to replay exactly what they see. Your own previews never count as opens." },
+  { q: "Can the note be shown right away instead of tucked in?", a: "Yes. On the card step choose Pinned to show the note beside the bouquet, or Tucked in to hide it in the bouquet as a little card they tap to open. They can switch it on their side too, and videos and GIFs follow your choice." },
+  { q: "Do I need to sign up?", a: "No. Your sent and received bouquets are saved on your device under My bouquets. Signing in is optional and only syncs them across devices." },
 ];

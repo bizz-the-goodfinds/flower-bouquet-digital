@@ -3,6 +3,7 @@ import Link from "next/link";
 import { StemThumb } from "@/components/bouquet/static-bouquet";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { FLOWER_FAMILIES } from "@/lib/content/flowers";
+import { JsonLd, collectionLd } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
   title: "Flower Meanings by Flower & Color",
@@ -14,6 +15,14 @@ export const metadata: Metadata = {
 export default function FlowersIndex() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <JsonLd
+        data={collectionLd({
+          name: "Flower meanings",
+          description: metadata.description as string,
+          path: "/flowers",
+          items: FLOWER_FAMILIES.map((x) => ({ name: x.name, path: `/flowers/${x.slug}` })),
+        })}
+      />
       <Breadcrumbs items={[{ name: "Flower meanings", path: "/flowers" }]} />
       <h1 className="mt-6 font-display text-5xl leading-none sm:text-6xl">Flower meanings</h1>
       <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink/80">

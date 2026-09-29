@@ -61,7 +61,7 @@ function linerPattern(look: EnvelopeLook, w: number, h: number) {
 }
 
 /** Wax seal centred on the origin (radius 30). */
-export function sealSvg(look: EnvelopeLook, initial = "") {
+export function sealSvg(look: EnvelopeLook, initial = "", textless = false) {
   const c = ENVELOPE_COLORS[look.color] ?? ENVELOPE_COLORS.classic;
   const S = `stroke="${c.sealInk}" stroke-width="1.5"`;
   const inner =
@@ -69,7 +69,9 @@ export function sealSvg(look: EnvelopeLook, initial = "") {
       ? `<path d="M0 10 C-14 0 -16 -10 -9 -14 C-4 -17 0 -13 0 -9 C0 -13 4 -17 9 -14 C16 -10 14 0 0 10Z" fill="${c.accent}" ${S}/>`
       : look.seal === "star"
         ? `<path d="M0 -14 L4 -4 L14 -4 L6 3 L9 13 L0 7 L-9 13 L-6 3 L-14 -4 L-4 -4Z" fill="${c.accent}" ${S}/>`
-        : look.seal === "initial"
+        : look.seal === "initial" && textless
+          ? ""
+          : look.seal === "initial"
           ? `<text x="0" y="8" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="24" fill="${c.accent}">${escapeXml((initial || "♥").slice(0, 1).toUpperCase())}</text>`
           : look.seal === "bow"
             ? `<path d="M0 0 L-14 -8 L-14 8Z M0 0 L14 -8 L14 8Z" fill="${c.accent}" ${S}/><circle r="4" fill="${c.accent}" ${S}/>`
@@ -85,8 +87,8 @@ export function linerSwatchSvg(look: EnvelopeLook) {
   return `<rect width="60" height="60" fill="${c.flap}"/>${linerPattern(look, 60, 60)}`;
 }
 
-/** Envelope artwork (viewBox 0 0 380 260). */
-export function envelopeSvg(look: EnvelopeLook, initial = "") {
+/** Envelope artwork (viewBox 0 0 380 260). `textless` leaves the initial seal blank (for renderers without fonts). */
+export function envelopeSvg(look: EnvelopeLook, initial = "", textless = false) {
   const c = ENVELOPE_COLORS[look.color] ?? ENVELOPE_COLORS.classic;
   const flap = "M8 16 L190 146 L372 16 L372 10 Q372 6 366 6 L14 6 Q8 6 8 10Z";
   return (
@@ -95,7 +97,7 @@ export function envelopeSvg(look: EnvelopeLook, initial = "") {
     `<clipPath id="pp-flap"><path d="${flap}"/></clipPath>` +
     `<path d="${flap}" fill="${c.flap}"/><g clip-path="url(#pp-flap)">${linerPattern(look, 380, 150)}</g>` +
     `<path d="M6 18 L190 150 L374 18" fill="none" stroke="${c.line}" stroke-width="3" stroke-linejoin="round"/>` +
-    `<g transform="translate(190 148)">${sealSvg(look, initial)}</g>`
+    `<g transform="translate(190 148)">${sealSvg(look, initial, textless)}</g>`
   );
 }
 

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "September 29, 2026";
+const UPDATED = "September 30, 2026";
 
 export default function PrivacyPage() {
   const host = site.url.replace(/^https?:\/\//, "");
@@ -31,7 +31,15 @@ export default function PrivacyPage() {
             optional open date and optional expiry date.
           </li>
           <li>
-            <strong>Reactions and reports</strong> that recipients send.
+            <strong>Reactions, chat messages and reports:</strong> emoji reactions and short messages between a sender and each recipient,
+            and reports about a bouquet.
+          </li>
+          <li>
+            <strong>Personal links (optional):</strong> the first name a sender types for each person they send a personal link to, and
+            whether and how often that link was opened.
+          </li>
+          <li>
+            <strong>Received bouquets (signed in only):</strong> which bouquets you opened, so they appear under My bouquets on every device.
           </li>
           <li>
             <strong>A one-way hash of your IP address</strong>, used only for spam and abuse prevention (rate limits). We never store your raw IP
@@ -46,8 +54,9 @@ export default function PrivacyPage() {
 
         <h2>Stored on your device</h2>
         <p>
-          Your browser keeps a list of bouquets you sent, a private edit key for each (so only you can edit or delete them), your unsent draft and
-          your cookie choice. Images, videos and GIFs you download are created on your device and are not uploaded to us. Clearing your browser
+          Your browser keeps a list of bouquets you sent, a private edit key for each (so only you can edit or delete them), a list of bouquets
+          you received, a random device ID that keeps your chat with each sender private to you, which chat messages you have already seen, your
+          unsent draft and your cookie choice. Images, videos and GIFs you download are created on your device and are not uploaded to us. Clearing your browser
           data removes all of this.
         </p>
 
@@ -71,8 +80,9 @@ export default function PrivacyPage() {
           </li>
         </ul>
         <p>
-          In the EU, EEA and UK, analytics only load after you accept. Elsewhere they load after your first interaction and you can opt out from
-          the notice. To change your choice, clear this site&rsquo;s data in your browser and choose again.
+          In the EU, EEA and UK, analytics only load after you accept. Elsewhere, Google Analytics loads a moment after the page does and
+          Clarity loads after your first interaction, and you can opt out from the notice. Links shared from the app carry a tag naming the app
+          they were shared through (for example WhatsApp), so we can see which ones people use; it contains nothing about you. To change your choice, clear this site&rsquo;s data in your browser and choose again.
         </p>
 
         <h2>Who can see a bouquet</h2>

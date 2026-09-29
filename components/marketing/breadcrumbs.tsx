@@ -12,7 +12,7 @@ export function Breadcrumbs({ items }: { items: { name: string; path: string }[]
             <li key={it.path} className="flex items-center gap-1.5">
               {i < all.length - 1 ? (
                 <>
-                  <Link href={it.path} className="hover:text-ink hover:underline underline-offset-2">
+                  <Link href={it.path} className="inline-flex min-h-6 items-center underline-offset-2 hover:text-ink hover:underline">
                     {it.name}
                   </Link>
                   <span aria-hidden>/</span>

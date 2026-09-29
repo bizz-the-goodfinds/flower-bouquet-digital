@@ -36,6 +36,7 @@ export function useExport(src: AnimSource, where: "sender" | "recipient") {
       track("image_downloaded", { format: kind, where });
     } catch (err) {
       setError((err as Error).message || "Couldn't save that. Try again.");
+      track("export_failed", { format: kind, where, error: String((err as Error).message).slice(0, 100) });
     } finally {
       setBusy(null);
     }

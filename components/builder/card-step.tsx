@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CalendarClock, Eye, Hourglass, Loader2, Pencil, RotateCcw, Save, Send } from "lucide-react";
+import { ArrowLeft, CalendarClock, Eye, Hourglass, Pencil, RotateCcw, Save, Send } from "lucide-react";
+import { MiniBloom } from "@/components/ui/bloom-loader";
 import { EnvelopeArt } from "@/components/reveal/envelope";
 import { RecipientView } from "@/components/reveal/recipient-view";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -9,7 +10,7 @@ import { ENVELOPE_COLORS, LINERS, SEALS, linerSwatchSvg, sealSvg, type EnvelopeC
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { NoteCard } from "@/components/bouquet/note-card";
 import { BACKGROUNDS } from "@/lib/bouquet/catalog";
-import { CARD_FONTS, CARD_TEMPLATES, EXPIRY_OPTIONS, MAX_STICKERS, STICKERS, type CardFont, type CardTemplate, type Expiry } from "@/lib/bouquet/card";
+import { CARD_FONTS, CARD_TEMPLATES, EXPIRY_OPTIONS, MAX_STICKERS, NOTE_MODES, STICKERS, type CardFont, type CardTemplate, type Expiry, type NoteMode } from "@/lib/bouquet/card";
 import { clearDraft, useBuilder } from "@/lib/bouquet/store";
 import { OCCASION_BY_SLUG } from "@/lib/content/occasions";
 import { addMine } from "@/lib/local";
@@ -47,6 +48,7 @@ export function CardStep() {
       const d = new Date(st.revealAt);
       if (Number.isNaN(d.getTime()) || d.getTime() < Date.now() - 60_000) {
         setError("Pick an open time in the future.");
+        track("form_error", { form: "card", reason: "reveal_in_past" });
         return;
       }
       reveal = d.toISOString();
@@ -98,6 +100,13 @@ export function CardStep() {
         has_reveal_at: Boolean(reveal),
         is_reply: Boolean(st.replyTo),
         font: st.card.style.font,
+        template: st.card.style.template,
+        note_mode: st.card.style.note,
+        envelope_color: st.card.style.envelope.color,
+        sticker_count: st.card.style.stickers.length,
+        expiry: st.expiry,
+        wrap: st.design.wrapper,
+        has_message: Boolean(st.card.message.trim()),
         length_bucket: st.card.message.length < 50 ? "short" : st.card.message.length < 200 ? "medium" : "long",
       });
       st.markSent({ slug: data.slug, token: data.token });
@@ -105,6 +114,7 @@ export function CardStep() {
     } catch (err) {
       setError((err as Error).message);
       setConfirm(null);
+      track("bouquet_send_failed", { editing: Boolean(st.editing), error: (err as Error).message.slice(0, 100) });
     } finally {
       setSending(false);
     }
@@ -146,7 +156,7 @@ export function CardStep() {
             <p className="label mb-2">Need words? Tap one</p>
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
               {ideas.map((m) => (
-                <button type="button" key={m} onClick={() => setCard({ message: m })} className="chip shrink-0 text-left whitespace-nowrap hover:border-ink">
+                <button type="button" key={m} data-track="message_idea_used" data-track-occasion={occasion ?? "none"} onClick={() => setCard({ message: m })} className="chip shrink-0 text-left whitespace-nowrap hover:border-ink">
                   {m.length > 42 ? `${m.slice(0, 40)}…` : m}
                 </button>
               ))}
@@ -282,6 +292,34 @@ export function CardStep() {
         </fieldset>
 
         <fieldset>
+          <legend className="label mb-2">How the note arrives</legend>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="How the note arrives">
+            {(Object.keys(NOTE_MODES) as NoteMode[]).map((k) => {
+              const on = card.style.note === k;
+              return (
+                <button
+                  type="button"
+                  key={k}
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setCard({ style: { ...card.style, note: k } })}
+                  className={`flex items-start gap-2.5 rounded-2xl border-[1.5px] p-3 text-left transition ${on ? "border-ink bg-paper shadow-[2px_2px_0_0_var(--color-ink)]" : "border-line bg-paper/60 hover:border-ink/40"}`}
+                >
+                  <span aria-hidden className="text-xl leading-none">
+                    {k === "tucked" ? "💌" : "📌"}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">{NOTE_MODES[k].name}</span>
+                    <span className="block text-xs text-ink-soft">{NOTE_MODES[k].hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-xs text-ink-soft">They can switch it on their side too. Videos and GIFs follow your choice.</p>
+        </fieldset>
+
+        <fieldset>
           <legend className="label mb-2 flex items-center gap-1.5">
             <Hourglass className="size-3.5" aria-hidden /> Link lasts
           </legend>
@@ -349,7 +387,7 @@ export function CardStep() {
             <ArrowLeft className="size-4" aria-hidden /> Flowers
           </button>
           <button type="submit" className="btn-primary text-base" disabled={sending || needsCaptcha}>
-            <Eye className="size-4" aria-hidden />
+            {needsCaptcha ? <MiniBloom /> : <Eye className="size-4" aria-hidden />}
             {needsCaptcha ? "Checking…" : "Preview & send"}
           </button>
         </div>
@@ -366,7 +404,7 @@ export function CardStep() {
             <NoteCard to={card.to} from={card.from} message={card.message} style={card.style} placeholder className="relative mx-2 -mt-6 -rotate-1 sm:-mt-10" />
           </div>
           <button type="submit" className="btn-primary mx-auto mt-5 hidden w-full max-w-sm text-base lg:flex" disabled={needsCaptcha}>
-            <Eye className="size-4" aria-hidden /> {needsCaptcha ? "Checking…" : "Preview & send"}
+            {needsCaptcha ? <MiniBloom /> : <Eye className="size-4" aria-hidden />} {needsCaptcha ? "Checking…" : "Preview & send"}
           </button>
         </div>
       </div>
@@ -435,7 +473,7 @@ function ConfirmSend({
         </button>
       </Tooltip>
       <button type="button" className="btn-primary min-h-11 !px-4 text-sm whitespace-nowrap" onClick={onConfirm} disabled={sending} autoFocus>
-        {sending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : editing ? <Save className="size-4" aria-hidden /> : <Send className="size-4" aria-hidden />}
+        {sending ? <MiniBloom /> : editing ? <Save className="size-4" aria-hidden /> : <Send className="size-4" aria-hidden />}
         {sending ? "Wrapping…" : editing ? "Save" : "Send 💐"}
       </button>
     </div>

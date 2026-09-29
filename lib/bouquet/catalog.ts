@@ -107,6 +107,14 @@ export const PAPERS: Record<string, Paper & { name: string }> = {
   coral: { name: "Coral", paper: "#F7B7A3", shade: "#E88C73", edge: "#C4644C" },
   ivory: { name: "Ivory", paper: "#FFFBF0", shade: "#EDE3CF", edge: "#C9B99A" },
   cherry: { name: "Cherry dots", paper: "#E8553E", shade: "#B83A28", edge: "#FFE3DC", print: "dots" },
+  mint: { name: "Mint", paper: "#CDEBDC", shade: "#9FD0B8", edge: "#6BA88A" },
+  peach: { name: "Peach", paper: "#FAD3BE", shade: "#EFAE8D", edge: "#C98563" },
+  lavender: { name: "Lavender", paper: "#C9B8F2", shade: "#A48FDC", edge: "#7B63BF" },
+  forest: { name: "Forest", paper: "#3F5E45", shade: "#2A4230", edge: "#8FB295" },
+  candy: { name: "Candy stripes", paper: "#FDE4EC", shade: "#F4B3C8", edge: "#EE7FA4", print: "stripes" },
+  sweetheart: { name: "Sweetheart", paper: "#FBD3DE", shade: "#EFA3B8", edge: "#D6336C", print: "hearts" },
+  gingham: { name: "Picnic gingham", paper: "#FFF8EC", shade: "#EADFCB", edge: "#E8553E", print: "gingham" },
+  starry: { name: "Starry night", paper: "#27305A", shade: "#171D3D", edge: "#F7DE8A", print: "stars" },
 };
 
 export const RIBBONS: Record<string, { name: string; color: string; dark: string }> = {
@@ -117,6 +125,13 @@ export const RIBBONS: Record<string, { name: string; color: string; dark: string
   lilac: { name: "Lilac", color: "#B9A5E8", dark: "#8A73C4" },
   ink: { name: "Ink", color: "#2E2B33", dark: "#111014" },
   gold: { name: "Gold", color: "#E8C15A", dark: "#B8912E" },
+  navy: { name: "Navy", color: "#2F3F73", dark: "#1B264D" },
+  butter: { name: "Butter", color: "#F7DE8A", dark: "#D1B04E" },
+  sky: { name: "Sky", color: "#9DC3EE", dark: "#6E97C9" },
+  coral: { name: "Coral", color: "#F28A6B", dark: "#C9624A" },
+  forest: { name: "Forest", color: "#4F7A47", dark: "#33552E" },
+  burgundy: { name: "Burgundy", color: "#8C1D45", dark: "#5E102D" },
+  silver: { name: "Silver", color: "#D9DCE3", dark: "#A3A8B4" },
 };
 
 export const BACKGROUNDS: Record<string, { name: string; fill: string; dark?: boolean }> = {
@@ -126,7 +141,15 @@ export const BACKGROUNDS: Record<string, { name: string; fill: string; dark?: bo
   butter: { name: "Butter", fill: "#FBF0C9" },
   lilac: { name: "Lilac", fill: "#ECE6FB" },
   sky: { name: "Sky", fill: "#E0ECF7" },
+  peach: { name: "Peach", fill: "#FDE6D8" },
+  mint: { name: "Mint", fill: "#DDF2E7" },
+  rose: { name: "Rose", fill: "#F8D5DD" },
+  sand: { name: "Sand", fill: "#F1E6D2" },
+  cloud: { name: "Cloud", fill: "#F4F4F6" },
   night: { name: "Night", fill: "#1E1B2E", dark: true },
+  forest: { name: "Forest", fill: "#1F3326", dark: true },
+  plum: { name: "Plum", fill: "#3A1F3D", dark: true },
+  ocean: { name: "Ocean", fill: "#132A43", dark: true },
 };
 
 export const DEFAULTS = { wrapper: "cone", paper: "kraft", ribbon: "cherry", background: "cream" };

@@ -1,8 +1,9 @@
 "use client";
 
 import { create } from "zustand";
+import { track } from "@/lib/analytics/track";
 import { DEFAULTS } from "./catalog";
-import { normalizeCardFont, normalizeStickers, type CardStyle, type Expiry } from "./card";
+import { normalizeCardFont, normalizeNoteMode, normalizeStickers, type CardStyle, type Expiry } from "./card";
 import { DEFAULT_ENVELOPE, normalizeEnvelope } from "./envelope";
 import { MAX_STEMS, arrange, normalizeDesign, spawnPosition, type Design, type Item } from "./composition";
 
@@ -46,7 +47,7 @@ type State = {
 };
 
 export const emptyDesign = (): Design => ({ items: [], ...DEFAULTS });
-const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "playfair", stickers: [], envelope: { ...DEFAULT_ENVELOPE } } });
+const emptyCard = (): CardDraft => ({ to: "", from: "", message: "", style: { template: "paper", font: "playfair", stickers: [], envelope: { ...DEFAULT_ENVELOPE }, note: "tucked" } });
 
 const HISTORY = 60;
 
@@ -64,7 +65,10 @@ export const useBuilder = create<State>((set, get) => ({
   future: [],
   sent: null,
 
-  setStep: (step) => set({ step, selectedId: null }),
+  setStep: (step) => {
+    if (get().step !== step) track("builder_step", { step, flower_count: get().design.items.length });
+    set({ step, selectedId: null });
+  },
   select: (selectedId) => set({ selectedId }),
   commit: (fn) =>
     set((s) => ({ past: [...s.past.slice(-HISTORY), s.design], future: [], design: fn(s.design) })),
@@ -74,12 +78,14 @@ export const useBuilder = create<State>((set, get) => ({
     set((s) => {
       const prev = s.past.at(-1);
       if (!prev) return s;
+      track("undo_used");
       return { design: prev, past: s.past.slice(0, -1), future: [s.design, ...s.future], selectedId: null };
     }),
   redo: () =>
     set((s) => {
       const next = s.future[0];
       if (!next) return s;
+      track("redo_used");
       return { design: next, future: s.future.slice(1), past: [...s.past, s.design], selectedId: null };
     }),
   addStem: (slug) => {
@@ -91,6 +97,7 @@ export const useBuilder = create<State>((set, get) => ({
   },
   updateItem: (id, patch) => get().commit((d) => ({ ...d, items: d.items.map((it) => (it.id === id ? { ...it, ...patch } : it)) })),
   removeItem: (id) => {
+    track("flower_removed", { flower_slug: get().design.items.find((it) => it.id === id)?.f });
     get().commit((d) => ({ ...d, items: d.items.filter((it) => it.id !== id) }));
     set({ selectedId: null });
   },
@@ -141,6 +148,7 @@ export function readDraft(): Pick<State, "design" | "card" | "occasion" | "reply
     d.card.style.stickers = normalizeStickers(d.card.style.stickers);
     d.card.style.font = normalizeCardFont(d.card.style.font);
     d.card.style.envelope = normalizeEnvelope(d.card.style.envelope);
+    d.card.style.note = normalizeNoteMode(d.card.style.note);
     d.design = normalizeDesign(d.design);
     return d;
   } catch {

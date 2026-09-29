@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { startAnalytics } from "@/lib/analytics/track";
+import { startAnalytics, startFirebase, track } from "@/lib/analytics/track";
 
 const KEY = "pp-consent";
 
@@ -35,19 +35,32 @@ export function Consent() {
       };
       events.forEach((e) => window.addEventListener(e, run, { once: true, passive: true }));
     };
+    // GA (first-party) also starts shortly after load, so visitors who never tap or scroll are still counted.
+    // Crawlers aren't visitors: GA drops them anyway, so don't load it for them.
+    const bot = navigator.webdriver || /bot|crawl|spider|lighthouse|headless/i.test(navigator.userAgent);
+    const idle = (fn: () => void) => {
+      if (bot) return;
+      const go = () => setTimeout(fn, 2000);
+      if (document.readyState === "complete") go();
+      else window.addEventListener("load", go, { once: true });
+    };
     let eu = false;
     try {
       eu = Intl.DateTimeFormat().resolvedOptions().timeZone.startsWith("Europe/");
     } catch {}
 
-    if (stored === "granted") later(startAnalytics);
-    else if (stored === "denied") return;
+    if (stored === "granted") {
+      idle(startFirebase);
+      later(startAnalytics);
+    } else if (stored === "denied") return;
     else if (eu) later(() => setMode("optin"));
-    else
+    else {
+      idle(startFirebase);
       later(() => {
         startAnalytics();
         setMode("notice");
       });
+    }
   }, []);
 
   useEffect(() => {
@@ -76,6 +89,7 @@ export function Consent() {
               onClick={() => {
                 saveConsent("granted");
                 startAnalytics();
+                track("consent_granted", { region: "eu" });
                 setMode("hidden");
               }}
             >
