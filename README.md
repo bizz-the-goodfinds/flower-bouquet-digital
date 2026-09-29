@@ -27,7 +27,7 @@ pnpm dev
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | Vercel + local | Canonical origin, no trailing slash |
 | `NEXT_PUBLIC_SUPABASE_URL` | Vercel + local | |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Vercel + local | Not used yet (reserved for auth) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Vercel + local | Browser key for optional sign-in |
 | `SUPABASE_SERVICE_ROLE_KEY` | Vercel + local | **Secret.** Server only |
 | `SUPABASE_DB_URL` | local only | Session pooler URL, used by `scripts/migrate.mjs` |
 | `IP_HASH_SALT` | Vercel + local | Random string; salts IP hashes for rate limiting |
