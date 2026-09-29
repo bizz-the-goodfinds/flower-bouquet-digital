@@ -74,13 +74,9 @@ export function BloomLoader({ label, steps = STEPS, delay = 180, className = "" 
   );
 }
 
-/** A single spinning flower, sized like an icon. Drop-in for button spinners. */
-export function MiniBloom({ className = "size-4" }: { className?: string }) {
-  return (
-    <svg viewBox="-12 -12 24 24" className={`animate-[spin_1.6s_linear_infinite] ${className}`} aria-hidden>
-      <Petals color="currentColor" r={5.5} />
-    </svg>
-  );
+/** The mini bouquet at icon size, for buttons and inline spots (sending, saving, exporting). */
+export function MiniBloom({ className = "size-5" }: { className?: string }) {
+  return <BouquetMark className={`shrink-0 ${className}`} />;
 }
 
 /** Placeholder block with a soft petal-coloured shimmer. */

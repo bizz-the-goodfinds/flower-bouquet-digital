@@ -259,14 +259,14 @@ function ChatWindow({
         >
           {messages === null ? (
             <div className="grid h-full place-items-center">
-              <MiniBloom className="size-7 text-petal-deep" />
+              <MiniBloom className="size-12" />
             </div>
           ) : messages.length === 0 ? (
             <div className="grid h-full place-items-center px-4 text-center text-sm text-ink-soft">{empty}</div>
           ) : (
             <>
               <p className="py-1 text-center text-[11px] text-ink-soft">
-                {loadingOlder ? <MiniBloom className="mx-auto size-4" /> : hasMore ? "Scroll up for earlier messages" : "This is the start of your chat 🌸"}
+                {loadingOlder ? <MiniBloom className="mx-auto size-6" /> : hasMore ? "Scroll up for earlier messages" : "This is the start of your chat 🌸"}
               </p>
               <Bubbles messages={messages} me={me} names={names} />
             </>

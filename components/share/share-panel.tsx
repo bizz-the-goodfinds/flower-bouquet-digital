@@ -128,7 +128,7 @@ export function SharePanel({
             <Icon className="size-5" aria-hidden />
             {exp.busy === kind ? (
               <span className="flex items-center gap-1">
-                <MiniBloom className="size-3.5 text-petal-deep" />
+                <MiniBloom className="size-5" />
                 {kind === "video" || kind === "gif" ? `${Math.round(exp.progress * 100)}%` : "Saving…"}
               </span>
             ) : (

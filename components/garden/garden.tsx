@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, Check, Copy, Eye, Flower2, MessageCircle, Pencil, Share, Trash2, Undo2, X } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
-import { BloomLoader, BouquetCardSkeleton } from "@/components/ui/bloom-loader";
+import { BloomLoader, BouquetCardSkeleton, MiniBloom } from "@/components/ui/bloom-loader";
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { EnvelopeArt } from "@/components/reveal/envelope";
 import type { Design } from "@/lib/bouquet/composition";
@@ -629,7 +629,11 @@ function Account({ signedIn, email, count }: { signedIn: boolean; email: string 
               </div>
             )}
             <button className="btn-primary shrink-0 !py-2.5" disabled={busy}>
-              {busy ? "One sec…" : mode === "signup" ? "Create account" : mode === "signin" ? "Sign in" : "Send reset link"}
+              {busy ? (
+                <>
+                  <MiniBloom /> One sec…
+                </>
+              ) : mode === "signup" ? "Create account" : mode === "signin" ? "Sign in" : "Send reset link"}
             </button>
           </form>
 

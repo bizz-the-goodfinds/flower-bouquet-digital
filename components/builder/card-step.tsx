@@ -350,7 +350,7 @@ export function CardStep() {
             <ArrowLeft className="size-4" aria-hidden /> Flowers
           </button>
           <button type="submit" className="btn-primary text-base" disabled={sending || needsCaptcha}>
-            <Eye className="size-4" aria-hidden />
+            {needsCaptcha ? <MiniBloom /> : <Eye className="size-4" aria-hidden />}
             {needsCaptcha ? "Checking…" : "Preview & send"}
           </button>
         </div>
@@ -367,7 +367,7 @@ export function CardStep() {
             <NoteCard to={card.to} from={card.from} message={card.message} style={card.style} placeholder className="relative mx-2 -mt-6 -rotate-1 sm:-mt-10" />
           </div>
           <button type="submit" className="btn-primary mx-auto mt-5 hidden w-full max-w-sm text-base lg:flex" disabled={needsCaptcha}>
-            <Eye className="size-4" aria-hidden /> {needsCaptcha ? "Checking…" : "Preview & send"}
+            {needsCaptcha ? <MiniBloom /> : <Eye className="size-4" aria-hidden />} {needsCaptcha ? "Checking…" : "Preview & send"}
           </button>
         </div>
       </div>

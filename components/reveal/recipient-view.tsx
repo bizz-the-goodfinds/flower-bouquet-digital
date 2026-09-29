@@ -124,7 +124,7 @@ export function RecipientView({
                     <button className={iconBtn} aria-label={label} onClick={() => exp.run(kind)} disabled={exp.busy !== null}>
                       {exp.busy === kind ? (
                         <span className="flex items-center gap-1 font-mono text-[10px]">
-                          <MiniBloom className="size-3.5" />
+                          <MiniBloom className="size-5" />
                           {kind !== "story" && `${Math.round(exp.progress * 100)}%`}
                         </span>
                       ) : (

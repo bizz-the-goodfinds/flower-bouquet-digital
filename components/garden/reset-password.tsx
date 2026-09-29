@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { MiniBloom } from "@/components/ui/bloom-loader";
 
 /** Lands here from the reset email (the callback already exchanged the code for a session). */
 export function ResetPassword() {
@@ -47,7 +48,13 @@ export function ResetPassword() {
         />
       </label>
       <button className="btn-primary w-full" disabled={state === "saving"}>
-        {state === "saving" ? "Saving…" : "Save password"}
+        {state === "saving" ? (
+          <>
+            <MiniBloom /> Saving…
+          </>
+        ) : (
+          "Save password"
+        )}
       </button>
       {error && (
         <p role="alert" className="text-sm text-petal-deep">
