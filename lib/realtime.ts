@@ -32,29 +32,35 @@ export function useLiveChat(name: string | null, me: Side, onNew: () => void) {
 
   useEffect(() => {
     if (!name || !enabled()) return;
-    const sb = supabaseBrowser();
-    const ch = sb.channel(name, { config: { broadcast: { self: false }, presence: { key: `${me}-${Math.random().toString(36).slice(2, 8)}` } } });
-    ch.on("broadcast", { event: "new" }, () => onNewRef.current())
-      .on("broadcast", { event: "typing" }, ({ payload }) => {
-        if (payload?.side === me) return;
-        setPeerTyping(true);
-        clearTimeout(typingTimer.current);
-        typingTimer.current = setTimeout(() => setPeerTyping(false), 3500);
-      })
-      .on("presence", { event: "sync" }, () => {
-        const state = ch.presenceState<{ side: Side }>();
-        setPeerOnline(Object.values(state).some((list) => list.some((p) => p.side !== me)));
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") ch.track({ side: me }).catch(() => {});
-      });
-    channel.current = ch;
+    let cancelled = false;
+    let off = () => {};
+    supabaseBrowser().then((sb) => {
+      if (cancelled) return;
+      const ch = sb.channel(name, { config: { broadcast: { self: false }, presence: { key: `${me}-${Math.random().toString(36).slice(2, 8)}` } } });
+      ch.on("broadcast", { event: "new" }, () => onNewRef.current())
+        .on("broadcast", { event: "typing" }, ({ payload }) => {
+          if (payload?.side === me) return;
+          setPeerTyping(true);
+          clearTimeout(typingTimer.current);
+          typingTimer.current = setTimeout(() => setPeerTyping(false), 3500);
+        })
+        .on("presence", { event: "sync" }, () => {
+          const state = ch.presenceState<{ side: Side }>();
+          setPeerOnline(Object.values(state).some((list) => list.some((p) => p.side !== me)));
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") ch.track({ side: me }).catch(() => {});
+        });
+      channel.current = ch;
+      off = () => sb.removeChannel(ch);
+    });
     return () => {
+      cancelled = true;
       clearTimeout(typingTimer.current);
       channel.current = null;
       setPeerOnline(false);
       setPeerTyping(false);
-      sb.removeChannel(ch);
+      off();
     };
   }, [name, me]);
 
@@ -76,7 +82,7 @@ export function useLiveChat(name: string | null, me: Side, onNew: () => void) {
 /** Fire-and-forget ping on a channel we aren't subscribed to (e.g. the sender's inbox). */
 export async function ping(name: string) {
   if (!enabled()) return;
-  const sb = supabaseBrowser();
+  const sb = await supabaseBrowser();
   const ch = sb.channel(name, { config: { broadcast: { self: false } } });
   await new Promise<void>((resolve) => {
     const t = setTimeout(resolve, 4000);
@@ -99,10 +105,16 @@ export function useInbox(names: string[], onPing: () => void) {
   });
   useEffect(() => {
     if (!key || !enabled()) return;
-    const sb = supabaseBrowser();
-    const chans = key.split("|").map((n) => sb.channel(n).on("broadcast", { event: "new" }, () => onPingRef.current()).subscribe());
+    let cancelled = false;
+    let off = () => {};
+    supabaseBrowser().then((sb) => {
+      if (cancelled) return;
+      const chans = key.split("|").map((n) => sb.channel(n).on("broadcast", { event: "new" }, () => onPingRef.current()).subscribe());
+      off = () => chans.forEach((c) => sb.removeChannel(c));
+    });
     return () => {
-      chans.forEach((c) => sb.removeChannel(c));
+      cancelled = true;
+      off();
     };
   }, [key]);
 }
