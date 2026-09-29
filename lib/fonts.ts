@@ -15,9 +15,10 @@ export const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geis
 
 // Letter (note card) fonts; only loaded on routes that show cards. Playfair is shared with the site.
 const handlee = Handlee({ subsets: ["latin"], weight: "400", variable: "--font-handlee", display: "swap", preload: false });
-const playwrite = Playwrite_CA_Guides({ weight: "400", variable: "--font-playwrite", display: "swap" });
+// next/font has no metrics for Playwrite or Bitcount, so skip the auto-sized fallback (avoids a build warning) and fall back to cursive.
+const playwrite = Playwrite_CA_Guides({ weight: "400", variable: "--font-playwrite", display: "swap", adjustFontFallback: false, fallback: ["cursive"] });
 const cutive = Cutive_Mono({ subsets: ["latin"], weight: "400", variable: "--font-cutive", display: "swap", preload: false });
 const sacramento = Sacramento({ subsets: ["latin"], weight: "400", variable: "--font-sacramento", display: "swap", preload: false });
-const bitcount = Bitcount_Single({ subsets: ["latin"], variable: "--font-bitcount", display: "swap", preload: false });
+const bitcount = Bitcount_Single({ subsets: ["latin"], variable: "--font-bitcount", display: "swap", preload: false, adjustFontFallback: false, fallback: ["monospace"] });
 
 export const cardFontVars = [handlee, playwrite, cutive, sacramento, bitcount].map((f) => f.variable).join(" ");
