@@ -6,6 +6,7 @@ import { groupConversations, type Msg } from "@/lib/server/chat";
 import { normalizeDesign } from "@/lib/bouquet/composition";
 import { normalizeEnvelope } from "@/lib/bouquet/envelope";
 import { json, tokenMatches } from "@/lib/server/security";
+import { voicePlayUrls } from "@/lib/server/voice";
 
 const bodySchema = z.object({
   items: z.array(z.object({ slug: z.string().regex(/^[A-Za-z0-9_-]{6,16}$/), token: z.string().min(10).max(64) })).max(100),
@@ -33,8 +34,9 @@ export async function POST(req: Request) {
   for (const b of byToken.data ?? []) if (tokenMatches(tokens.get(b.slug) ?? null, b.edit_token_hash)) seen.set(b.slug, b);
   for (const b of byOwner.data ?? []) seen.set(b.slug, b);
 
-  // Bouquets people sent back in reply to these (they belong in the same thread).
-  const { data: replyRows } = seen.size
+  // Bouquets people sent back in reply to these (they belong in the same thread), and voice note links, together.
+  const live = [...seen.values()].filter((b) => !b.deleted_at);
+  const [{ data: replyRows }, voiceUrls] = await Promise.all([seen.size
     ? await db
         .from("bouquets")
         .select("slug, reply_to, sender_name, created_at, reveal_at, composition, wrapper, background, card_style")
@@ -42,12 +44,14 @@ export async function POST(req: Request) {
         .is("deleted_at", null)
         .eq("is_flagged", false)
         .returns<(Pick<Row, "slug" | "composition" | "wrapper" | "background" | "card_style" | "created_at" | "reveal_at"> & { reply_to: string; sender_name: string | null })[]>()
-    : { data: [] };
+    : { data: [] },
+    voicePlayUrls(live.flatMap((b) => (b.voice_path ? [b.voice_path] : []))),
+  ]);
 
   const bouquets = [...seen.values()]
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .map((b) => ({
-      ...toSource(b),
+      ...toSource(b, b.voice_path ? (voiceUrls.get(b.voice_path) ?? null) : null),
       views: b.view_count,
       deleted: Boolean(b.deleted_at),
       owned: Boolean(uid && b.owner_id === uid),

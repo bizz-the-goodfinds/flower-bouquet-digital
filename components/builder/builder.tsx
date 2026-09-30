@@ -6,6 +6,8 @@ import { ArrowRight, Eye, Flower2, RotateCcw } from "lucide-react";
 import { BouquetSvg } from "@/components/bouquet/bouquet-svg";
 import { NoteCard } from "@/components/bouquet/note-card";
 import { SharePanel } from "@/components/share/share-panel";
+import { PushPrompt } from "@/components/pwa/push";
+import { InstallPrompt } from "@/components/pwa/install";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { BloomLoader } from "@/components/ui/bloom-loader";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -19,9 +21,9 @@ import { FAMILY_BY_SLUG } from "@/lib/content/flowers";
 import { OCCASIONS, OCCASION_BY_SLUG } from "@/lib/content/occasions";
 import { track } from "@/lib/analytics/track";
 import { DEFAULTS } from "@/lib/bouquet/catalog";
-import { getMine } from "@/lib/local";
+import { getMine, rememberRef } from "@/lib/local";
 
-export type BuilderParams = { occasion?: string; flowers?: string; replyTo?: string; to?: string; edit?: string };
+export type BuilderParams = { occasion?: string; flowers?: string; replyTo?: string; to?: string; edit?: string; ref?: string; resume?: string };
 
 /** ISO timestamp to a datetime-local input value in the user's timezone. */
 function toLocalInput(iso: string | null) {
@@ -62,6 +64,8 @@ export function Builder({ params }: { params: BuilderParams }) {
             design: normalizeDesign(src.design),
             card: src.card,
             occasion: src.occasion,
+            song: src.song ?? null,
+            voice: src.voice ?? null,
             revealAt: toLocalInput(src.revealAt),
             expiry: "never",
             editing: { slug, token },
@@ -82,8 +86,16 @@ export function Builder({ params }: { params: BuilderParams }) {
       source = "flower_page";
     } else {
       const draft = readDraft();
-      if (draft && draft.design.items.length) st.load(draft);
+      if (draft && draft.design.items.length) {
+        st.load(draft);
+        // Back from connecting an AI account: pick up on the Write step where they left off.
+        if (params.resume === "write") {
+          st.setStep("card");
+          source = "resume";
+        }
+      }
     }
+    if (params.ref && /^[A-Za-z0-9_-]{6,16}$/.test(params.ref)) rememberRef(params.ref);
     if (params.replyTo) {
       st.setMeta({ replyTo: params.replyTo });
       if (params.to) st.setCard({ to: params.to.slice(0, 60) });
@@ -266,6 +278,7 @@ function Sent() {
   const sent = useBuilder((s) => s.sent)!;
   const design = useBuilder((s) => s.design);
   const card = useBuilder((s) => s.card);
+  const song = useBuilder((s) => s.song);
   const edited = useBuilder((s) => Boolean(s.editing));
   const url = `${window.location.origin}/b/${sent.slug}`;
   const hasNote = Boolean(card.to || card.from || card.message);
@@ -287,8 +300,14 @@ function Sent() {
           .
         </p>
         <div className="mt-6">
-          <SharePanel url={url} to={card.to} from={card.from} design={design} message={card.message} style={card.style} personal={{ slug: sent.slug, token: sent.token || null }} />
+          <SharePanel url={url} to={card.to} from={card.from} design={design} message={card.message} style={card.style} song={song} personal={{ slug: sent.slug, token: sent.token || null }} />
         </div>
+        {!edited && (
+          <div className="mt-6 space-y-3">
+            <PushPrompt to={card.to} />
+            <InstallPrompt where="sent" />
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href="/garden" className="btn-ghost border border-line">
             <Eye className="size-4" aria-hidden /> Preview in My bouquets

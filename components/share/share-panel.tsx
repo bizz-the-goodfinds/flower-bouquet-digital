@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, ChevronDown, Clapperboard, Copy, Film, Image as ImageIcon, Mail, QrCode, Share, Smartphone } from "lucide-react";
 import type { Design } from "@/lib/bouquet/composition";
 import type { CardStyle } from "@/lib/bouquet/card";
+import type { Song } from "@/lib/bouquet/media";
 import { track, withUtm } from "@/lib/analytics/track";
 import { MiniBloom } from "@/components/ui/bloom-loader";
 import { PersonalLinks } from "./personal-links";
@@ -16,6 +17,7 @@ export function SharePanel({
   design,
   message,
   style,
+  song = null,
   personal,
 }: {
   url: string;
@@ -24,13 +26,14 @@ export function SharePanel({
   design: Design;
   message: string;
   style: CardStyle;
+  song?: Song | null;
   /** Lets the sender make one link per recipient. */
   personal?: { slug: string; token: string | null };
 }) {
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
   const [moreWays, setMoreWays] = useState(false);
-  const exp = useExport({ design, to, from, message, style }, "sender");
+  const exp = useExport({ design, to, from, message, style, song }, "sender");
   const text = to ? `${to}, I sealed something special for you 💌 Open it:` : "I sealed something special for you 💌 Open it:";
   const canNativeShare = typeof navigator !== "undefined" && "share" in navigator;
 

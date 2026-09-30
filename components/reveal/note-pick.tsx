@@ -6,8 +6,10 @@ import { Pin, PinOff, X } from "lucide-react";
 import { NoteCard } from "@/components/bouquet/note-card";
 import { CARD_TEMPLATES, TAG_HANG, type CardStyle } from "@/lib/bouquet/card";
 import { CANVAS, tieOf } from "@/lib/bouquet/composition";
+import type { Song, Voice } from "@/lib/bouquet/media";
+import { ExtrasHint, NoteExtras } from "@/components/bouquet/note-extras";
 
-export type Note = { to: string; from: string; message: string; style: CardStyle };
+export type Note = { to: string; from: string; message: string; style: CardStyle; song?: Song | null; voice?: Voice | null };
 
 /** One element moves between the three note states (tucked tag, pinned card, open card) via this shared layout id. */
 const LAYOUT_ID = "note-card";
@@ -84,6 +86,7 @@ export function PinnedNote({ note, onOpen, onUnpin, delay = 1.5, className = "" 
       <motion.div layoutId={LAYOUT_ID} className="rounded-2xl">
         <button type="button" onClick={onOpen} className="block w-full cursor-zoom-in text-left" aria-label="Read the whole note">
           <NoteCard to={note.to} from={note.from} message={note.message} style={note.style} className="!p-5 sm:!p-6 [&_.pp-note-msg]:line-clamp-4 lg:[&_.pp-note-msg]:line-clamp-[12]" />
+          <ExtrasHint song={note.song ?? null} voice={note.voice ?? null} />
         </button>
       </motion.div>
       <button
@@ -100,7 +103,7 @@ export function PinnedNote({ note, onOpen, onUnpin, delay = 1.5, className = "" 
 }
 
 /** The note opened full size: flies out of the bouquet and unfolds. Pin keeps it beside the bouquet. */
-export function OpenNote({ note, pinned, onClose, onTogglePin }: { note: Note; pinned: boolean; onClose: () => void; onTogglePin: () => void }) {
+export function OpenNote({ note, pinned, onClose, onTogglePin, preview }: { note: Note; pinned: boolean; onClose: () => void; onTogglePin: () => void; preview?: boolean }) {
   const reduce = useReducedMotion();
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -134,6 +137,9 @@ export function OpenNote({ note, pinned, onClose, onTogglePin }: { note: Note; p
           >
             <NoteCard to={note.to} from={note.from} message={note.message} style={note.style} />
           </motion.div>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.45 } }} exit={{ opacity: 0 }}>
+          <NoteExtras song={note.song ?? null} voice={note.voice ?? null} from={note.from} preview={preview} />
         </motion.div>
         <motion.div className="mt-5 flex flex-wrap justify-center gap-2" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.5 } }} exit={{ opacity: 0 }}>
           <button type="button" onClick={onTogglePin} className="btn-secondary !py-2.5 text-sm">

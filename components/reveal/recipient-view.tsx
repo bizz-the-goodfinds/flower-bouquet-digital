@@ -11,7 +11,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { BACKGROUNDS } from "@/lib/bouquet/catalog";
 import type { Conversation } from "@/lib/bouquet/chat";
 import { normalizeEnvelope } from "@/lib/bouquet/envelope";
-import { addReceived, getReceived, isMine, viewerId } from "@/lib/local";
+import { addReceived, getReceived, isMine, rememberRef, viewerId } from "@/lib/local";
 import { MiniBloom } from "@/components/ui/bloom-loader";
 import { track } from "@/lib/analytics/track";
 import type { PublicBouquet, ThreadItem } from "@/lib/server/bouquets";
@@ -79,8 +79,8 @@ export function RecipientView({
   const reduce = useReducedMotion();
   const bg = BACKGROUNDS[bouquet.design.background] ?? BACKGROUNDS.cream;
   const dark = Boolean(bg.dark) && open;
-  const exp = useExport({ design: bouquet.design, to: bouquet.to, from: bouquet.from, message: bouquet.message, style: bouquet.style }, "recipient");
-  const hasNote = Boolean(bouquet.to || bouquet.from || bouquet.message);
+  const exp = useExport({ design: bouquet.design, to: bouquet.to, from: bouquet.from, message: bouquet.message, style: bouquet.style, song: bouquet.song }, "recipient");
+  const hasNote = Boolean(bouquet.to || bouquet.from || bouquet.message || bouquet.song || bouquet.voice);
   const sendBack = `/create?replyTo=${bouquet.slug}${bouquet.from ? `&to=${encodeURIComponent(bouquet.from)}` : ""}`;
 
   useEffect(() => {
@@ -98,6 +98,8 @@ export function RecipientView({
     const t = setTimeout(async () => {
       setMine(own);
       if (own) return;
+      // If they go on to make their own bouquet, it counts toward this sender's referral stats.
+      rememberRef(bouquet.slug);
       // Our side of the chat: the personal link, else the chat this device already has, else this device.
       const known = getReceived().find((e) => e.slug === bouquet.slug);
       let conv = link ? `l:${link}` : (known?.conversation ?? `d:${viewerId()}`);
@@ -254,6 +256,7 @@ export function RecipientView({
               {noteOpen && (
                 <OpenNote
                   note={bouquet}
+                  preview={preview}
                   pinned={pinned}
                   onTogglePin={() => {
                     setPinned(!pinned);

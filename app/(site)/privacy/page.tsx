@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "September 30, 2026";
+const UPDATED = "September 30, 2026 (v2: AI note writer, songs, voice notes, notifications)";
 
 export default function PrivacyPage() {
   const host = site.url.replace(/^https?:\/\//, "");
@@ -42,6 +42,24 @@ export default function PrivacyPage() {
             <strong>Received bouquets (signed in only):</strong> which bouquets you opened, so they appear under My bouquets on every device.
           </li>
           <li>
+            <strong>Songs and voice notes (optional):</strong> the song link you add, with the title, artist and cover image we look up from
+            Spotify, YouTube or Apple Music; and voice notes you record, stored privately and played only through short-lived links. A voice note
+            is deleted when you delete its bouquet or remove it while editing.
+          </li>
+          <li>
+            <strong>Notifications (optional):</strong> if you turn them on, your browser&rsquo;s push subscription (an address at Google, Apple,
+            Mozilla or Microsoft&rsquo;s push service), which bouquets it&rsquo;s for, and which kinds of notification you want. Turning them off
+            deletes it. Notifications say who opened or answered a bouquet, never what they wrote.
+          </li>
+          <li>
+            <strong>Badges (signed in only):</strong> which badges your account earned and when. Streaks and stats are worked out from your
+            bouquets when you open My bouquets.
+          </li>
+          <li>
+            <strong>Referrals:</strong> when you make a bouquet after opening someone else&rsquo;s, we note which bouquet brought you, so its
+            sender sees a count (&ldquo;3 people sent flowers after opening yours&rdquo;). They never see who you are.
+          </li>
+          <li>
             <strong>A one-way hash of your IP address</strong>, used only for spam and abuse prevention (rate limits). We never store your raw IP
             address.
           </li>
@@ -54,10 +72,37 @@ export default function PrivacyPage() {
 
         <h2>Stored on your device</h2>
         <p>
-          Your browser keeps a list of bouquets you sent, a private edit key for each (so only you can edit or delete them), a list of bouquets
+          Your browser keeps your AI key if you connected one (see below), a list of bouquets you sent, a private edit key for each (so only you can edit or delete them), a list of bouquets
           you received, a random device ID that keeps your chat with each sender private to you, which chat messages you have already seen, your
-          unsent draft and your cookie choice. Images, videos and GIFs you download are created on your device and are not uploaded to us. Clearing your browser
-          data removes all of this.
+          unsent draft and your cookie choice. With v2 it can also keep: the last bouquet you opened (for 30 days, so a bouquet you make next
+          counts toward its sender&rsquo;s referral stats), your badges and whether you&rsquo;ve seen their celebration, your notification settings,
+          whether the &ldquo;Your garden&rdquo; panel is open, a count of your visits, and when you last said &ldquo;Not now&rdquo; to notifications
+          or installing the app (so we don&rsquo;t ask too often). Images, videos, GIFs and badge images you download are created on your device
+          and are not uploaded to us. Clearing your browser data removes all of this.
+        </p>
+
+        <h2>AI note writer</h2>
+        <p>
+          &ldquo;Help me write&rdquo; runs on <strong>your own</strong> AI account with Google (Gemini), OpenAI, Anthropic or OpenRouter. Your API key
+          is kept only in your browser (for the current tab, or on this device if you tick &ldquo;Remember&rdquo;) and your browser sends it,
+          with the tone, names, occasion and details you give, straight to the provider you chose. None of it passes through or is stored on
+          our servers, and it is never sent to our analytics. The provider&rsquo;s own privacy policy covers what they do with the request.
+          Signing in with OpenRouter creates a key on your OpenRouter account that you can revoke there.
+        </p>
+
+        <h2>Embedded players</h2>
+        <p>
+          A song card shows its cover image from the music service. The Spotify, YouTube or Apple Music player loads only when the recipient taps
+          the card; from then on that service&rsquo;s own cookies and privacy policy apply. YouTube uses its privacy-enhanced mode.
+        </p>
+
+        <h2>Notifications and the app</h2>
+        <p>
+          We only ask for notification permission after you tap a button, and never on a bouquet someone sent you. You can turn notifications off in My bouquets
+          or in your browser at any time; that deletes your subscription from our database. Tapping a notification opens My bouquets with a
+          tag that tells our analytics the visit came from a notification. Installing the app adds nothing new to what we collect. The app keeps
+          copies of the home page, the bouquet maker and My bouquets on your device so they open on a weak connection; bouquet pages and your
+          data are never stored in that cache.
         </p>
 
         <h2>Analytics and cookies</h2>
@@ -95,6 +140,8 @@ export default function PrivacyPage() {
         <ul>
           <li>Bouquets stay until you delete them or until the expiry you chose. Expired and deleted bouquets stop working immediately.</li>
           <li>Rate-limit records are kept only as long as needed to prevent abuse.</li>
+          <li>Voice notes are deleted with their bouquet. A recording you make but never send may be kept for a short while, then deleted.</li>
+          <li>Notification subscriptions are deleted when you turn notifications off, or when your browser tells us they no longer work.</li>
           <li>Account data stays until you ask us to delete your account.</li>
         </ul>
 
@@ -108,7 +155,10 @@ export default function PrivacyPage() {
         <h2>Service providers</h2>
         <p>
           Data is stored with Supabase (database and accounts) and served by Vercel (hosting). Analytics are provided by Google (Firebase) and
-          Microsoft (Clarity). Bot protection is provided by Cloudflare. These providers process data on our behalf.
+          Microsoft (Clarity). Bot protection is provided by Cloudflare. Notifications are delivered through your browser&rsquo;s push service
+          (Google, Apple, Mozilla or Microsoft). These providers process data on our behalf. Song details come from the public pages of
+          Spotify, YouTube and Apple Music, which we contact without sending anything about you. The AI provider you connect for the note writer
+          (Google, OpenAI, Anthropic or OpenRouter) is chosen and paid for by you and receives requests directly from your browser, not from us.
         </p>
 
         <h2>Children</h2>

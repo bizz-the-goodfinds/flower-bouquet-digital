@@ -1,6 +1,6 @@
 # Flower Bouquet Digital — Product & Build Plan
 
-Status (2026-09-30): v1 is built; v1.1 (envelope link previews, chat, threads, received bouquets, personal links, more wraps) is in progress. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
+Status (2026-09-30): v1, v1.1 and v1.2 are built. v2 (AI note writer with bring-your-own-key, song and voice notes, streaks/badges/referral stats, PWA install and push) is planned; see section 3. Monetization and Sentry are v3. Brand: **Flower Bouquet Digital**. See "Build status" at the end of this file for what is done and what remains.
 
 ---
 
@@ -71,15 +71,79 @@ Every received bouquet is an ad for the product. The "send one back" button is t
 - Profanity / abuse filter on note text, report button on recipient view.
 - Shared bouquet pages are `noindex` (private by default).
 
-### v2 (after launch, not in first build unless you say so)
-- AI note writer ("help me write something cute / funny / deep") via Claude API.
-- Song attachment (Spotify / YouTube link card) and voice note.
-- Group bouquet: multiple friends each add a flower + message to one bouquet.
-- Public "garden" gallery of opted-in bouquets.
-- Streaks / badges, referral stats.
-- More languages (Hindi, Spanish, etc.) with hreflang.
-- PWA install + push ("your bouquet was opened").
-- Monetization: premium flower packs, remove watermark, custom wrapper, physical flower delivery affiliate.
+### v2 (planned 2026-09-30, one-go build)
+
+Four features. Dropped from v2: group bouquet, public "garden" gallery, more languages. Monetization and Sentry moved to v3.
+
+**1. AI note writer: bring your own key**
+- A "Help me write" button on the Write step. The sender picks a tone (cute, funny, deep, romantic, sorry, short and sweet) and can add a few details ("we met at uni", "she loves cats"). The recipient name and occasion are filled in for them. The writer returns 3 drafts; tapping one puts it in the note, where it can be edited. Follow-up buttons: "Shorter", "More emoji", "Try again". Drafts stay within the 500-character note limit.
+- **We never pay for AI and never hold keys.** Each user connects their own AI account in one of two ways:
+  - **Paste a key** from OpenAI (ChatGPT), Anthropic (Claude) or Google (Gemini). Gemini has a free tier, so the guide suggests it to people without a paid account.
+  - **Sign in with OpenRouter.** This uses OpenRouter's OAuth flow (PKCE): the user logs in, approves, and comes back with a key. No copy-pasting. One OpenRouter account covers models from every major provider.
+- **Built-in guides.** A setup sheet walks through each provider: where to sign up, the exact page for creating a key, whether it's free or paid (with a rough cost per note, a fraction of a cent), and how to set a spending limit. A "Test key" button confirms the key works before it is saved. The same guides are published as a public page, `/guides/ai-note-writer-api-key`, which also works as SEO/AEO content.
+- **Key safety.**
+  - The key stays in the user's browser. By default it lasts for the session only; a "Remember on this device" option keeps it in localStorage.
+  - The browser calls the provider directly (all four support browser requests), so the key never reaches our server, database, logs, analytics or Clarity recordings. The key field is masked in Clarity.
+  - "Disconnect" deletes it.
+  - Fallback, only if a provider blocks browser calls: a pass-through route that forwards the request without storing or logging it.
+- Default models are each provider's cheap, fast tier (Claude: Haiku 4.5; the others are picked at build time). An advanced setting lets users change the model.
+- The system prompt keeps drafts kind and on-occasion. Drafts still go through the existing note moderation when the bouquet is created.
+- Errors get plain messages: invalid key, out of credit, rate limited, provider down.
+- Analytics events: `ai_setup_started`, `ai_key_connected` (provider, method), `ai_note_generated` (provider, tone), `ai_note_used`. Never the key, the prompt or the draft text.
+
+**2. Song and voice note**
+- **Song.** The sender pastes a Spotify, YouTube or Apple Music link. The server validates it and fetches the title, artist and thumbnail through each service's oEmbed endpoint (no API keys needed). The recipient sees a small song card after the note; tapping it loads the embedded player. The player only loads on tap, so no third-party cookies are set before then and autoplay rules aren't an issue. PNG, video and GIF exports show the song card as a static image.
+- **Voice note.**
+  - Recorded in the browser, up to 60 seconds, with preview, re-record and delete.
+  - Uploaded to a private Supabase Storage bucket (`voice-notes`, max 2 MB) and played through a short-lived signed URL.
+  - Deleted along with its bouquet. Covered by rate limits and the report flow.
+  - Plays after the note on the recipient page. Chrome records WebM/Opus and Safari records MP4/AAC; playback is tested on iOS Safari, Android Chrome and in-app browsers.
+- Both are optional and are added from the Write step.
+
+**3. Streaks, badges and referral stats**
+- **Streak:** the number of weeks in a row the user has sent at least one bouquet. Weekly, not daily, because nobody sends flowers every day.
+- **Badges:** first bouquet; 5, 25 and 100 sent; first reply received; a thread 5 deep; every occasion used once; first voice note; first song. Earned badges get a small celebration and a shareable badge image.
+- **Referral stats:** "3 people sent their first bouquet after opening one of yours." Counted when a recipient creates a bouquet from the "Send one back" link or another link carrying `ref`. Opens and reactions per bouquet are already tracked.
+- Shown in a "Your garden" stats strip at the top of My bouquets. Works on a device without an account and syncs once signed in.
+
+**4. PWA install and push notifications**
+- **Service worker.** Caches the app shell and static assets so the builder opens fast and survives a flaky connection. Private bouquet pages and API responses are never cached.
+- **Install.** An "Add to home screen" button uses the browser's install prompt on Android and desktop Chrome/Edge. iOS gets a short illustrated "Share → Add to Home Screen" sheet. The button is offered after a user's second bouquet, not on first visit.
+- **Push.**
+  - Permission is asked in context, after sending: "Want to know when Sam opens it?"
+  - Notifications:
+    - bouquet opened for the first time (for personal links, per recipient)
+    - new chat message or reaction
+    - a scheduled bouquet has been revealed
+  - Sent from our API with Web Push (VAPID) when the event is recorded. Subscriptions live in a new `push_subscriptions` table tied to the owner token or account.
+  - Users choose which notifications they get in My bouquets, and can turn them all off.
+  - iOS only supports push for apps added to the home screen (iOS 16.4+). The UI says so instead of failing silently.
+
+**Supporting work**
+- Migration `0006_v2.sql`:
+  - song and voice columns on bouquets
+  - `voice-notes` storage bucket and policies
+  - `push_subscriptions` table
+  - `badges` table
+  - `ref_bouquet_id` on bouquets
+  - streak/stats view
+  - RLS for all of the above
+- Privacy policy and terms: AI providers (keys stay in the browser; text goes straight to the chosen provider), voice storage, embedded players, push. FAQ entries and llms.txt updated.
+- New dependency: `web-push` (server). No AI SDKs; plain `fetch` keeps the bundle small.
+- QA: the existing overflow, CTA and Lighthouse checks must still pass, plus tests for mic permission, push permission and install on real iOS and Android devices.
+
+**Build order for v2**
+1. Migration + types.
+2. AI note writer + guides page.
+3. Song + voice note (Write step, recipient page, exports).
+4. Streaks, badges, referral stats.
+5. Service worker, install, push.
+6. Privacy/terms/FAQ/llms.txt, analytics events, QA pass.
+
+### v3 (later)
+- Monetization: premium flower packs, removing the watermark, custom wrappers, and an affiliate link for real flower delivery.
+- Commissioned flower art. This pairs with premium packs.
+- Sentry error tracking: `@sentry/nextjs` on client, server and edge; source maps uploaded on each Vercel build; a tunnel route so ad blockers don't drop reports. Note text, names, emails and AI keys are scrubbed. Replays are off, sample rates stay inside the free tier, and alerts go to email.
 
 ---
 
@@ -99,7 +163,9 @@ Every received bouquet is an ad for the product. The "send one back" button is t
 | Image export | `html-to-image` / SVG → canvas | Client-side PNG + story export |
 | Analytics | Microsoft Clarity + Firebase Analytics (GA4) + Vercel Speed Insights | Heatmaps/replays + funnels + real-user Core Web Vitals |
 | Bot protection | Cloudflare Turnstile | Free, invisible |
-| Error tracking | Sentry (optional) | Production bugs |
+| Error tracking | Sentry (v3) | Production bugs |
+| AI note writer | User's own key: OpenAI, Anthropic, Gemini or OpenRouter (OAuth), called from the browser (v2) | No AI cost for us, no keys on our servers |
+| Push | Web Push (VAPID) via `web-push` + service worker (v2) | "Your bouquet was opened" |
 | Fonts | `next/font` self-hosted | No layout shift, no third-party font request |
 
 ---
@@ -350,16 +416,21 @@ The full event and parameter reference is in README.md → Analytics. In short:
 - **Sharing:** channel clicks, personal links created/deleted, downloads and export failures.
 - **Recipient:** viewed (with source, occasion, personal link), locked view, unwrapped, note opened/pinned, chat toggled, reactions, replies, send-back, reports.
 - **My bouquets:** tabs, previews, deletes, claims, sign-in/sign-up (including failures), password resets, sync prompt.
+- **v2, AI note writer:** writer opened, setup started, key connected (provider, paste or OAuth, remembered), key failed (reason), drafts generated (provider, tone, tweak), draft used, disconnected. Never the key, prompt or draft text.
+- **v2, song and voice:** song added/removed/played (provider), voice recorded (seconds)/removed/played, mic denied. `bouquet_created` has `has_song` and `has_voice`.
+- **v2, garden:** stats panel toggled, badge celebration shown, badge shared.
+- **v2, app and push:** nudge shown/accepted/dismissed (kind, ask number), install clicked/result/dismissed, app installed, opened from the installed app, push prompt accepted, push enabled (where)/denied/disabled, preference changed, notification tapped (`push_opened`).
 
 ### Traffic attribution (built)
 - Share links carry `utm_source=<channel>&utm_medium=share`.
   - Channels: whatsapp, telegram, x, sms, email, native_share, qr.
   - Without these tags, opens from in-app browsers (which send no referrer) would show as "direct".
 - The copy-link URL stays clean.
+- Notification taps carry `utm_source=push&utm_medium=notification&utm_campaign=<opened|chat|reply|reveal>`.
 
 ### GA4 admin (to do once)
-- Register `placement`, `occasion`, `source`, `channel`, `flower_slug`, `metric_name` and `content_type` as custom dimensions.
-- Mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events.
+- Register `placement`, `occasion`, `source`, `channel`, `flower_slug`, `metric_name` and `content_type` as custom dimensions. v2 adds `provider`, `tone`, `method`, `kind`, `badge` and `where`.
+- Mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events. v2 adds `ai_note_used`, `push_enabled` and `app_installed`.
 - Keep Enhanced measurement → "Page changes based on browser history events" on.
 
 ### Questions the data should answer
@@ -368,6 +439,10 @@ The full event and parameter reference is in README.md → Analytics. In short:
 - Which share channel brings the most opens? `bouquet_viewed.source` shows this.
 - How many recipients unwrap, react or send one back?
 - Which landing sections and content pages drive `cta_clicked`?
+- Does the AI writer help people finish? Compare `bouquet_created` for sessions with `ai_note_used` against those without, and look at `ai_key_failed` reasons.
+- Do bouquets with a song or voice note get more reactions and send-backs?
+- How many senders turn on push, and do they come back more (`push_opened`, `app_opened_installed`)?
+- How does each ask convert (`nudge_accepted` ÷ `nudge_shown` by `ask`)?
 
 North-star metric: **bouquets opened per week**. Viral coefficient = send-back bouquets created ÷ bouquets opened.
 
@@ -376,18 +451,18 @@ North-star metric: **bouquets opened per week**. Viral coefficient = send-back b
 ## 10. Pages & routes
 
 ```
-/                         landing (hero bouquet animation, CTA, how it works, FAQ)
-/create                   builder (?preset=birthday, ?replyTo=slug)
-/create/note              note step (or same page, step 2)
-/b/[slug]                 recipient view (noindex)
-/b/[slug]/edit            edit with token
-/garden                   my bouquets (logged in)
-/flowers                  flower meanings index
-/flowers/[slug]           single flower meaning
-/occasions/[slug]         occasion page + presets
-/guides/[slug]            articles
+/                         landing (hero bouquet animation, CTA, how it works, features, FAQ)
+/create                   builder: arrange → write → send (?occasion=, ?flowers=, ?replyTo=&to=, ?edit=, ?ref=, ?resume=write)
+/b/[slug]                 recipient view (noindex; ?r=<personal link key>), /b/[slug]/og teaser image
+/garden                   My bouquets: sent + received, chat, garden stats, notifications (noindex)
+/flowers, /flowers/[slug] flower meanings
+/occasions, /occasions/[slug]  occasion pages + presets
+/guides, /guides/[slug]   articles (incl. ai-note-writer-api-key)
 /faq, /about, /privacy, /terms
-/llms.txt, /llms-full.txt, /sitemap.xml, /robots.txt
+/account/reset            password reset
+/ai/callback              OpenRouter sign-in return (noindex, disallowed)
+/api/…                    bouquets, reactions, reports, song, voice, garden/stats, push/(subscribe|prefs), cron/reveals, auth/signup
+/llms.txt, /llms-full.txt, /sitemap.xml, /robots.txt, /manifest.webmanifest, /sw.js
 ```
 
 ---
@@ -396,26 +471,29 @@ North-star metric: **bouquets opened per week**. Viral coefficient = send-back b
 
 ```
 app/
-  (marketing)/page.tsx, faq/, about/, flowers/, occasions/, guides/
-  create/                 builder
-  b/[slug]/               recipient view + opengraph-image.tsx
-  garden/
-  api/bouquets/, api/reactions/, api/reports/
-  sitemap.ts, robots.ts, llms.txt/route.ts
+  (site)/                 landing, faq, about, flowers, occasions, guides, garden, privacy, terms, account/reset
+  (app)/create/           builder
+  b/[slug]/               recipient view, og teaser image
+  ai/callback/            OpenRouter sign-in return
+  api/                    bouquets/*, reactions, reports, song, voice, garden/stats, push/*, cron/reveals, auth/signup
+  sitemap.ts, robots.ts, manifest.ts, llms.txt/, llms-full.txt/
 components/
-  builder/  (Canvas, FlowerTray, Toolbar, Stem, ShuffleButton)
-  card/     (NoteCard, FontPicker)
-  reveal/   (Envelope, Bloom, CardFlip)
-  ui/       (Button, Sheet, Toast ...)
+  builder/                canvas, tray, toolbars, card step, attachments (song + voice), turnstile
+  ai/                     note writer (setup + drafts)
+  bouquet/                bouquet SVG, note card, note extras (song card, players)
+  reveal/                 recipient view, envelope, note tag/pin/open, chat, countdown
+  garden/                 My bouquets, garden stats + badges, sender preview
+  pwa/                    SW registration, install card + iOS guide, push prompt/settings, engagement nudge
+  share/, marketing/, analytics/, ui/ (sheet, tooltip, confirm dialog, loaders)
 lib/
-  supabase/ (client.ts, server.ts, admin.ts)
-  analytics/ (track.ts → Clarity + Firebase)
-  seo/      (jsonld.ts, metadata.ts)
-  composition/ (schema.ts, shuffle.ts, export.ts)
-content/    (flowers.json, occasions MDX, guides MDX)
-supabase/
-  migrations/  seed.sql
-public/     (icons, fonts fallback)
+  bouquet/                art, catalog, composition, card schema, media (song/voice), store, export, animate
+  ai/                     providers + browser key storage
+  pwa/                    client (SW, install, push) + ask backoff
+  garden/                 badges/streak rules, badge image
+  server/                 bouquets, chat, song lookup, voice storage, push, security, turnstile
+  content/, seo/, analytics/, supabase/, time/
+supabase/migrations/      0001–0006
+public/                   icons, sw.js
 ```
 
 ---
@@ -523,6 +601,27 @@ See the checklist in the chat reply / below.
 - Submit the sitemap to Google Search Console and Bing Webmaster Tools; verify Clarity masking on production.
 - Sign-ups are not email-verified, so someone could register an email they don't own. Acceptable for syncing bouquets; revisit before adding anything sensitive.
 
-### Not started (v2 ideas from section 3)
-AI note writer, song/voice attachments, group bouquets, public garden gallery, streaks/badges, more languages, PWA push notifications, monetization, commissioned flower art, Sentry error tracking.
+### v2 (built 2026-09-30, branch `feat/v2`)
+- **AI note writer (BYOK):** "Help me write" on the Write step. Six tones, optional details, 3 drafts, Shorter / More emoji / Try again. Providers: Gemini (`gemini-flash-lite-latest`), OpenAI (`gpt-5.4-mini`), Anthropic (`claude-haiku-4-5`), OpenRouter (`google/gemini-3.5-flash-lite`, OAuth PKCE sign-in via `/ai/callback`). The browser calls each provider directly (CORS checked for all four), so no pass-through route was needed. Key in sessionStorage, or localStorage with "Remember"; a model override and Disconnect are in the writer. Guide page: `/guides/ai-note-writer-api-key`. Code: `lib/ai/`, `components/ai/note-writer.tsx`.
+- **Song:** Spotify / YouTube / Apple Music links are parsed in `lib/bouquet/media.ts` and looked up server-side in `lib/server/song.ts` (oEmbed, plus Open Graph for the artist and Apple titles). They are looked up again on create/edit and never trusted from the client. The player loads on tap only (YouTube uses its nocookie domain). Image, video and GIF exports draw a static song card (no artwork, since third-party images would taint the canvas).
+- **Voice note:** MediaRecorder (WebM/Opus or MP4/AAC), 60 s cap, re-record and delete. The file uploads right away to `voice-notes/pending/…` through `/api/voice` (2 MB cap, 20 per IP per hour), and the server HMAC-signs the path. On send it moves to `b/<bouquet id>.<ext>`. Playback uses 1-hour signed URLs. It is deleted with the bouquet or when removed in an edit.
+- **Streaks, badges, referrals:** `/api/garden/stats`, `lib/garden/badges.ts`, and a "Your garden" strip at the top of My bouquets. The streak is weekly (UTC, Monday start). 9 badges, each with a celebration and a shareable PNG. Badge dates are stored in `badges` for accounts and in localStorage otherwise. Referrals are set from "Send one back", `?ref=`, or the last bouquet this device opened (30 days), counted as distinct IP hashes, and never counted for sending to yourself.
+- **PWA and push:** `public/sw.js` (app shell for `/`, `/create` and `/garden` network-first; hashed assets cache-first; `/b/*`, `/api/*` and RSC never cached). The install prompt (Android and desktop) or the iOS guide shows from the 2nd bouquet. Push: an opt-in on the sent screen and settings in My bouquets. Notifications fire on first open (per personal link), a recipient message or reaction, a bouquet sent back, and a scheduled bouquet unlocking (when the page is visited, plus a daily Vercel cron). Push endpoints are allowlisted to real push services to prevent SSRF. Notifications never include message text.
+- **Supporting:** migration `0006_v2.sql`, `web-push`, `Permissions-Policy: microphone=(self)`, and privacy, terms, FAQ and llms.txt updates. Analytics events: `ai_*`, `song_*`, `voice_*`, `push_*`, `install_*` and `badge_*`.
 
+### v2.1 (2026-09-30): polish after first test
+- Fixed: a long song title or the recording bar overflowed the Write column (a `<fieldset>` has `min-width: min-content`).
+- Scheduled reveal: the picker shows the sender's time zone and the exact opening moment. The recipient countdown and My bouquets show it in the viewer's own time zone, and past times can't be picked.
+- Push: "Registration failed - push service error" comes from Brave, which has push off by default. It is now explained with the fix. Tested end to end in Chrome: subscribe, save, preferences, FCM delivery (201), unsubscribe. A subscription made with an old VAPID key is replaced.
+- Asking: a page-level card (`EngagementNudge`) asks for notifications (people who've sent a bouquet) or install (from the 2nd visit), 12 s into a visit. "Not now" backs off 3 / 10 / 30 days, up to 4 asks, shared with the in-context cards.
+- My bouquets: notification settings and the install card sit right under the sign-in box. "Your garden" is a collapsible panel, closed by default, with a one-line summary.
+
+### v2 before merging
+1. Run `node --env-file=.env.local scripts/migrate.mjs` (applies `0006_v2.sql`). **Deploying before this breaks bouquet creation**, because inserts write the new columns.
+2. Add to Vercel env: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` and `CRON_SECRET` (all four are in `.env.local`).
+3. The Vercel cron is daily (Hobby limit). On Pro, change `vercel.json` to `*/15 * * * *` for timelier "unlocked" pushes.
+4. Test on real devices: mic recording on iOS Safari and Android Chrome, playback in in-app browsers (Instagram, WhatsApp), push on Android and on iOS 16.4+ from the home screen, and install.
+5. Clean up orphaned `voice-notes/pending/*` files (recorded but never sent) with a periodic job. Not built yet.
+
+### Not started
+- v3: monetization, commissioned flower art, Sentry.

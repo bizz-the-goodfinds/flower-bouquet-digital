@@ -12,6 +12,7 @@ import { EnvelopeArt } from "@/components/reveal/envelope";
 import type { Design } from "@/lib/bouquet/composition";
 import type { CardStyle } from "@/lib/bouquet/card";
 import type { EnvelopeLook } from "@/lib/bouquet/envelope";
+import type { Song, VoiceDraft } from "@/lib/bouquet/media";
 import { ago, chatKey, reactionSummary, type ChatMessage, type Conversation } from "@/lib/bouquet/chat";
 import { BACKGROUNDS } from "@/lib/bouquet/catalog";
 import { getMine, getReceived, getSeen, removeMine, removeReceived, useMine } from "@/lib/local";
@@ -19,6 +20,10 @@ import { supabaseBrowser } from "@/lib/supabase/browser";
 import { inboxChannel, useInbox } from "@/lib/realtime";
 import { track, withUtm } from "@/lib/analytics/track";
 import { DownloadMenu } from "@/components/share/download-menu";
+import { fmtZoned } from "@/lib/time/zone";
+import { GardenStatsStrip } from "./stats";
+import { NotificationSettings } from "@/components/pwa/push";
+import { InstallPrompt } from "@/components/pwa/install";
 // Only needed once someone taps Preview: keeps the reveal, chat and export code out of the first load.
 const SenderPreview = dynamic(() => import("./sender-preview").then((m) => m.SenderPreview), { ssr: false });
 
@@ -27,6 +32,8 @@ type Sent = {
   design: Design;
   card: { to: string; from: string; message: string; style: CardStyle };
   occasion: string | null;
+  song: Song | null;
+  voice: VoiceDraft | null;
   createdAt: string;
   expiresAt: string | null;
   revealAt: string | null;
@@ -112,6 +119,12 @@ export function Garden() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slugs]);
+
+  // Arrived by tapping a notification (the service worker adds these tags).
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    if (q.get("utm_source") === "push") track("push_opened", { kind: q.get("utm_campaign") ?? "unknown" });
+  }, []);
 
   // Stay fresh without a refresh: poll while visible, reload when the tab comes back.
   useEffect(() => {
@@ -242,6 +255,14 @@ export function Garden() {
     <div className="min-h-[30rem]">
       {confirmDialog}
       <Account signedIn={signedIn} email={email} count={sent.length} />
+      {/* Device settings sit with the account: notifications, then the app install offer. */}
+      {(sent.length > 0 || signedIn) && (
+        <div className="mt-2 space-y-2">
+          <NotificationSettings />
+          <InstallPrompt where="garden" />
+        </div>
+      )}
+      <GardenStatsStrip refreshKey={`${sent.length}:${signedIn}`} />
 
       <div role="tablist" aria-label="Show" className="mt-6 inline-flex rounded-full border border-line bg-paper p-1 text-sm">
         {(
@@ -303,6 +324,8 @@ export function Garden() {
             occasion: previewing.occasion,
             revealAt: previewing.revealAt,
             createdAt: previewing.createdAt,
+            song: previewing.song,
+            voice: previewing.voice?.url ? { url: previewing.voice.url, seconds: previewing.voice.seconds } : null,
           }}
           token={getMine().find((m) => m.slug === previewing.slug)?.token ?? null}
           conversations={previewing.conversations}
@@ -437,7 +460,8 @@ function SentCard({ b, unread, copied, onCopy, onDelete, onPreview }: { b: Sent;
                 <Users className="size-3.5" aria-hidden /> {links.filter((l) => l.openedAt).length}/{links.length} opened
               </Stat>
             )}
-            {b.expiresAt && <Stat>⏳ {fmtDate(b.expiresAt)}</Stat>}
+            {b.revealAt && new Date(b.revealAt) > new Date() && <Stat>🔒 Opens {fmtZoned(b.revealAt, { weekday: false })}</Stat>}
+            {b.expiresAt && <Stat>⏳ Expires {fmtDate(b.expiresAt)}</Stat>}
           </div>
         </div>
       </div>
@@ -485,7 +509,7 @@ function SentCard({ b, unread, copied, onCopy, onDelete, onPreview }: { b: Sent;
           {copied ? <Check className="size-4" aria-hidden /> : canShare ? <Share className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
           {copied ? "Copied" : canShare ? "Share" : "Copy"}
         </button>
-        <DownloadMenu src={{ design: b.design, to: b.card.to, from: b.card.from, message: b.card.message, style: b.card.style }} where="sender" className={actCls} />
+        <DownloadMenu src={{ design: b.design, to: b.card.to, from: b.card.from, message: b.card.message, style: b.card.style, song: b.song }} where="sender" className={actCls} />
         <span className="flex-1" />
         <Tooltip label="Delete">
           <button className="btn-ghost grid size-10 place-items-center !p-0 text-petal-deep" onClick={onDelete} aria-label={`Delete bouquet for ${b.card.to || "someone"}`}>
@@ -513,7 +537,7 @@ function ReceivedCard({ r, unread, onRemove }: { r: Received; unread: boolean; o
             from {r.from || "someone"}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {r.locked && r.revealAt ? <Stat>⏳ Opens {fmtDate(r.revealAt)}</Stat> : <Stat>💐 for {r.to || "you"}</Stat>}
+            {r.locked && r.revealAt ? <Stat>⏳ Opens {fmtZoned(r.revealAt, { weekday: false })}</Stat> : <Stat>💐 for {r.to || "you"}</Stat>}
             {r.replyTo && <Stat>↩ a reply</Stat>}
           </div>
         </div>

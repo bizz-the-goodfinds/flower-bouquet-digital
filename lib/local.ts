@@ -127,3 +127,21 @@ export function markSeen(key: string, at: string) {
     localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
   } catch {}
 }
+
+// ---------- Referral ----------
+
+const REF_KEY = "pp-ref-v1";
+const REF_DAYS = 30;
+
+/** Remembers the last bouquet this device opened, so a bouquet made afterwards counts as a referral for its sender. */
+export function rememberRef(slug: string) {
+  try {
+    localStorage.setItem(REF_KEY, JSON.stringify({ slug, at: Date.now() }));
+  } catch {}
+}
+
+export function getRef(): string | null {
+  const v = readJson<{ slug?: string; at?: number } | null>(REF_KEY, null);
+  if (!v?.slug || !v.at || Date.now() - v.at > REF_DAYS * 24 * 3600 * 1000) return null;
+  return /^[A-Za-z0-9_-]{6,16}$/.test(v.slug) ? v.slug : null;
+}

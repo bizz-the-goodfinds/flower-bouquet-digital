@@ -5,6 +5,7 @@ import { track } from "@/lib/analytics/track";
 import { DEFAULTS } from "./catalog";
 import { normalizeCardFont, normalizeNoteMode, normalizeStickers, type CardStyle, type Expiry } from "./card";
 import { DEFAULT_ENVELOPE, normalizeEnvelope } from "./envelope";
+import type { Song, VoiceDraft } from "./media";
 import { MAX_STEMS, arrange, normalizeDesign, spawnPosition, type Design, type Item } from "./composition";
 
 export type Step = "arrange" | "card" | "sent";
@@ -19,6 +20,9 @@ type State = {
   replyTo: string | null;
   revealAt: string; // datetime-local value, "" = open immediately
   expiry: Expiry;
+  /** Optional song link card and voice note, added on the Write step. */
+  song: Song | null;
+  voice: VoiceDraft | null;
   /** Set when editing an already-sent bouquet. */
   editing: { slug: string; token: string | null } | null;
   selectedId: string | null;
@@ -40,8 +44,8 @@ type State = {
   removeItem: (id: string) => void;
   shuffle: () => void;
   setCard: (patch: Partial<CardDraft>) => void;
-  setMeta: (patch: Partial<Pick<State, "occasion" | "replyTo" | "revealAt" | "expiry">>) => void;
-  load: (patch: Partial<Pick<State, "design" | "card" | "occasion" | "replyTo" | "revealAt" | "expiry" | "editing">>) => void;
+  setMeta: (patch: Partial<Pick<State, "occasion" | "replyTo" | "revealAt" | "expiry" | "song" | "voice">>) => void;
+  load: (patch: Partial<Pick<State, "design" | "card" | "occasion" | "replyTo" | "revealAt" | "expiry" | "editing" | "song" | "voice">>) => void;
   markSent: (sent: { slug: string; token: string }) => void;
   reset: () => void;
 };
@@ -59,6 +63,8 @@ export const useBuilder = create<State>((set, get) => ({
   replyTo: null,
   revealAt: "",
   expiry: "never",
+  song: null,
+  voice: null,
   editing: null,
   selectedId: null,
   past: [],
@@ -120,6 +126,8 @@ export const useBuilder = create<State>((set, get) => ({
       replyTo: null,
       revealAt: "",
       expiry: "never",
+      song: null,
+      voice: null,
       editing: null,
       selectedId: null,
       past: [],
@@ -132,14 +140,15 @@ export const useBuilder = create<State>((set, get) => ({
 const DRAFT_KEY = "pp-draft-v1";
 
 export function saveDraft() {
-  const { design, card, occasion, replyTo, step, editing } = useBuilder.getState();
+  const { design, card, occasion, replyTo, song, voice, step, editing } = useBuilder.getState();
   if (step === "sent" || editing) return;
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ design, card, occasion, replyTo, at: Date.now() }));
+    // The voice note's playback link expires; the recording itself is kept by path.
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ design, card, occasion, replyTo, song, voice: voice && { ...voice, url: null }, at: Date.now() }));
   } catch {}
 }
 
-export function readDraft(): Pick<State, "design" | "card" | "occasion" | "replyTo"> | null {
+export function readDraft(): Pick<State, "design" | "card" | "occasion" | "replyTo" | "song" | "voice"> | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
@@ -150,6 +159,8 @@ export function readDraft(): Pick<State, "design" | "card" | "occasion" | "reply
     d.card.style.envelope = normalizeEnvelope(d.card.style.envelope);
     d.card.style.note = normalizeNoteMode(d.card.style.note);
     d.design = normalizeDesign(d.design);
+    d.song ??= null;
+    d.voice ??= null;
     return d;
   } catch {
     return null;

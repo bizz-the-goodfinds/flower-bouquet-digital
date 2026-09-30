@@ -5,6 +5,9 @@ import { currentUserId } from "@/lib/supabase/server";
 import { tokenMatches } from "@/lib/server/security";
 import { normalizeDesign, type Design, type Item } from "@/lib/bouquet/composition";
 import { normalizeEnvelope, type EnvelopeLook } from "@/lib/bouquet/envelope";
+import { normalizeSong, parseSongUrl, type Song, type Voice } from "@/lib/bouquet/media";
+import { claimVoice, removeVoice, signVoicePath, voicePlayUrl } from "@/lib/server/voice";
+import { resolveSong } from "@/lib/server/song";
 import { EXPIRY_OPTIONS, normalizeCardFont, normalizeNoteMode, normalizeStickers, type CardStyle, type CreateBouquetInput } from "@/lib/bouquet/card";
 
 export type PublicBouquet = {
@@ -17,10 +20,12 @@ export type PublicBouquet = {
   occasion: string | null;
   revealAt: string | null;
   createdAt: string;
+  song: Song | null;
+  voice: Voice | null;
 };
 
 /** Server-only facts about a bouquet (never sent to the browser as-is). */
-export type BouquetMeta = { id: string; threadId: string; replyTo: string | null; ownerId: string | null };
+export type BouquetMeta = { id: string; threadId: string; replyTo: string | null; ownerId: string | null; /** Scheduled, and the sender hasn't been told it opened. */ revealPending?: boolean };
 
 export type BouquetState =
   | { status: "ok"; bouquet: PublicBouquet; meta: BouquetMeta }
@@ -51,13 +56,17 @@ export type Row = {
   deleted_at: string | null;
   is_flagged: boolean;
   created_at: string;
+  song?: unknown;
+  voice_path?: string | null;
+  voice_seconds?: number | null;
+  reveal_notified_at?: string | null;
 };
 
 export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
   if (!SLUG_RE.test(slug)) return { status: "missing" };
   const { data, error } = await supabaseAdmin()
     .from("bouquets")
-    .select("id, slug, reply_to, thread_id, owner_id, composition, wrapper, background, card_style, recipient_name, sender_name, message, occasion, reveal_at, expires_at, deleted_at, is_flagged, created_at")
+    .select("id, slug, reply_to, thread_id, owner_id, composition, wrapper, background, card_style, recipient_name, sender_name, message, occasion, reveal_at, expires_at, deleted_at, is_flagged, created_at, song, voice_path, voice_seconds, reveal_notified_at")
     .eq("slug", slug)
     .maybeSingle<Row>();
   if (error) throw error;
@@ -73,11 +82,18 @@ export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
   });
   const to = data.recipient_name ?? "";
   const from = data.sender_name ?? "";
-  const meta: BouquetMeta = { id: data.id!, threadId: data.thread_id ?? data.id!, replyTo: data.reply_to ?? null, ownerId: data.owner_id ?? null };
+  const meta: BouquetMeta = {
+    id: data.id!,
+    threadId: data.thread_id ?? data.id!,
+    replyTo: data.reply_to ?? null,
+    ownerId: data.owner_id ?? null,
+    revealPending: Boolean(data.reveal_at && !data.reveal_notified_at),
+  };
 
   if (data.reveal_at && new Date(data.reveal_at) > new Date()) {
     return { status: "locked", to, from, revealAt: data.reveal_at, design, envelope: normalizeEnvelope(data.card_style.envelope), meta };
   }
+  const voiceUrl = data.voice_path && data.voice_seconds ? await voicePlayUrl(data.voice_path) : null;
   return {
     status: "ok",
     meta,
@@ -97,6 +113,8 @@ export const getBouquet = cache(async (slug: string): Promise<BouquetState> => {
       occasion: data.occasion,
       revealAt: data.reveal_at,
       createdAt: data.created_at,
+      song: normalizeSong(data.song),
+      voice: voiceUrl ? { url: voiceUrl, seconds: data.voice_seconds! } : null,
     },
   };
 });
@@ -119,8 +137,32 @@ export function bouquetColumns(input: CreateBouquetInput) {
   };
 }
 
-/** Editable source of a bouquet, for its creator. */
-export function toSource(row: Row & { id?: string }) {
+/**
+ * Song and voice columns for an insert or update. The song is looked up again on the server (never trusted from the
+ * client) unless it's the one already saved; a new recording moves from pending/ onto the bouquet, a removed one is deleted.
+ * Returns an error message instead when the song link doesn't resolve.
+ */
+export async function mediaColumns(input: CreateBouquetInput, bouquetId: string, current: { song?: unknown; voice_path?: string | null } = {}) {
+  const saved = normalizeSong(current.song);
+  let song: Song | null = null;
+  if (input.song) {
+    song = saved && saved.url === parseSongUrl(input.song.url)?.url ? saved : normalizeSong(await resolveSong(input.song.url));
+    if (!song) return { error: "We couldn't find that song. Check the link or remove it." } as const;
+  }
+  let voice_path: string | null = null;
+  let voice_seconds: number | null = null;
+  if (input.voice) {
+    voice_path = await claimVoice(bouquetId, input.voice, current.voice_path ?? null);
+    if (!voice_path) return { error: "Your voice note didn't save. Record it again and resend." } as const;
+    voice_seconds = input.voice.seconds;
+  } else if (current.voice_path) {
+    await removeVoice(current.voice_path);
+  }
+  return { columns: { song, voice_path, voice_seconds } } as const;
+}
+
+/** Editable source of a bouquet, for its creator. `voiceUrl` is a playback link for the builder preview. */
+export function toSource(row: Row & { id?: string }, voiceUrl: string | null = null) {
   return {
     slug: row.slug,
     design: normalizeDesign({
@@ -143,6 +185,8 @@ export function toSource(row: Row & { id?: string }) {
       },
     },
     occasion: row.occasion,
+    song: normalizeSong(row.song),
+    voice: row.voice_path && row.voice_seconds ? { path: row.voice_path, sig: signVoicePath(row.voice_path), seconds: row.voice_seconds, url: voiceUrl } : null,
     revealAt: row.reveal_at,
     expiresAt: row.expires_at,
     createdAt: row.created_at,
@@ -150,7 +194,7 @@ export function toSource(row: Row & { id?: string }) {
 }
 
 export const SOURCE_COLUMNS =
-  "id, slug, reply_to, thread_id, edit_token_hash, owner_id, composition, wrapper, background, card_style, recipient_name, sender_name, message, occasion, reveal_at, expires_at, deleted_at, is_flagged, created_at, view_count";
+  "id, slug, reply_to, thread_id, edit_token_hash, owner_id, composition, wrapper, background, card_style, recipient_name, sender_name, message, occasion, reveal_at, expires_at, deleted_at, is_flagged, created_at, view_count, song, voice_path, voice_seconds";
 
 export const SLUG_PATTERN = SLUG_RE;
 export const LINK_KEY_RE = /^[A-Za-z0-9]{6,12}$/;
@@ -233,4 +277,23 @@ export function teaser(opts: { to: string; from: string; locked?: boolean }) {
       subtitle: locked ? "Sealed for now. Opens soon ⏳" : "Break the seal to see what's inside ✨",
     },
   };
+}
+
+/**
+ * Bouquet ids the caller created: proved by device edit tokens, plus everything the signed-in account owns.
+ * Deleted bouquets are left out.
+ */
+export async function ownedBouquetIds(items: { slug: string; token: string }[], uid: string | null) {
+  const db = supabaseAdmin();
+  const tokens = new Map(items.map((i) => [i.slug, i.token]));
+  const [byToken, byOwner] = await Promise.all([
+    tokens.size
+      ? db.from("bouquets").select("id, slug, edit_token_hash").in("slug", [...tokens.keys()]).is("deleted_at", null).returns<{ id: string; slug: string; edit_token_hash: string }[]>()
+      : null,
+    uid ? db.from("bouquets").select("id").eq("owner_id", uid).is("deleted_at", null).limit(1000).returns<{ id: string }[]>() : null,
+  ]);
+  const ids = new Set<string>();
+  for (const b of byToken?.data ?? []) if (tokenMatches(tokens.get(b.slug) ?? null, b.edit_token_hash)) ids.add(b.id);
+  for (const b of byOwner?.data ?? []) ids.add(b.id);
+  return [...ids];
 }

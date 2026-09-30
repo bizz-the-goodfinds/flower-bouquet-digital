@@ -14,7 +14,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function CreatePage({ searchParams }: PageProps<"/create">) {
   const sp = await searchParams;
-  const params = { occasion: one(sp.occasion), flowers: one(sp.flowers), replyTo: one(sp.replyTo), to: one(sp.to), edit: one(sp.edit) };
+  const params = { occasion: one(sp.occasion), flowers: one(sp.flowers), replyTo: one(sp.replyTo), to: one(sp.to), edit: one(sp.edit), ref: one(sp.ref), resume: one(sp.resume) };
   return (
     <div className={cardFontVars} data-card-fonts>
       <JsonLd data={[webAppLd(), breadcrumbLd([{ name: "Home", path: "/" }, { name: "Bouquet maker", path: "/create" }])]} />

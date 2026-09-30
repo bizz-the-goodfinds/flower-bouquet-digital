@@ -2,6 +2,7 @@ import { z } from "zod";
 import { designSchema } from "./composition";
 import { OCCASION_BY_SLUG } from "../content/occasions";
 import { envelopeSchema } from "./envelope";
+import { songInputSchema, voiceInputSchema } from "./media";
 
 export const CARD_TEMPLATES = {
   paper: { name: "Paper", bg: "#FFFDF8", ink: "#2B2420", accent: "#E8553E" },
@@ -101,6 +102,10 @@ export const createBouquetSchema = z.object({
     .refine((s) => !s || OCCASION_BY_SLUG.has(s)),
   revealAt: z.string().datetime({ offset: true }).optional().nullable(),
   replyTo: z.string().regex(/^[A-Za-z0-9_-]{6,16}$/).optional().nullable(),
+  /** The bouquet whose link brought the sender here (referral stats). */
+  ref: z.string().regex(/^[A-Za-z0-9_-]{6,16}$/).optional().nullable(),
+  song: songInputSchema,
+  voice: voiceInputSchema,
   expiry: z.enum(Object.keys(EXPIRY_OPTIONS) as [Expiry, ...Expiry[]]).default("never"),
   turnstileToken: z.string().max(4096).optional().nullable(),
   /** Honeypot: real users never fill this */

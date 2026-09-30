@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Download, HeartHandshake, Link2, Shuffle, Sparkles } from "lucide-react";
+import { ArrowRight, BellRing, CalendarClock, Download, Flame, HeartHandshake, Link2, Music, PenLine, Shuffle, Sparkles } from "lucide-react";
 import { StaticBouquet, StemThumb, presetDesign } from "@/components/bouquet/static-bouquet";
 import { FaqList } from "@/components/marketing/faq-list";
 import { OCCASIONS } from "@/lib/content/occasions";
@@ -186,6 +186,10 @@ export default function Home() {
             [Download, "Story-ready", "Download a post, a 9:16 story, or a video or GIF of the whole opening, petals and all."],
             [HeartHandshake, "React, chat, send one back", "They react and chat with you, then make you a bouquet in return. Every back-and-forth stays in one thread."],
             [Sparkles, "Private by default", "Links are unlisted and hidden from search. Delete any time."],
+            [PenLine, "Help me write", "Stuck on words? Pick a tone and get three drafts from your own AI (Gemini has a free tier). Your key stays on your device."],
+            [Music, "A song or your voice", "Add a Spotify, YouTube or Apple Music song, or record a voice note of up to a minute. It plays after they read your note."],
+            [BellRing, "Know when it's opened", "Install it like an app and get a notification when your bouquet is opened or they write back."],
+            [Flame, "Streaks and badges", "Keep a weekly streak, collect badges, and see how many people sent flowers after opening yours."],
           ].map(([Icon, t, d]) => {
             const I = Icon as typeof Sparkles;
             return (

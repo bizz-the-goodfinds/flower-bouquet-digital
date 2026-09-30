@@ -50,6 +50,10 @@ export const webAppLd = () => ({
     "Scheduled reveal at a set date and time",
     "Download as image or Instagram story",
     "Emoji reactions and send-one-back replies",
+    "AI note writer using your own Gemini, OpenAI, Anthropic or OpenRouter key",
+    "Song card (Spotify, YouTube, Apple Music) and voice notes up to 60 seconds",
+    "Weekly streaks, badges and referral stats",
+    "Installable app with push notifications when a bouquet is opened",
   ],
   publisher: { "@id": absoluteUrl("/#organization") },
 });

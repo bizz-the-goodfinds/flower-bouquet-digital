@@ -1,3 +1,5 @@
+import { PROVIDERS, PROVIDER_ORDER } from "@/lib/ai/providers";
+
 export type GuideSection = { heading: string; body: string[]; list?: string[] };
 
 export type Guide = {
@@ -130,6 +132,61 @@ export const GUIDES: Guide[] = [
       { q: "Are digital flowers eco-friendly?", a: "They have a tiny footprint compared with cut flowers, which are often grown in greenhouses and shipped by air." },
     ],
   },
+  {
+    slug: "ai-note-writer-api-key",
+    title: "AI Note Writer: Get a Free Gemini, ChatGPT or Claude Key",
+    metaDescription: "Connect your own AI to the bouquet note writer: get a free Gemini key, or use OpenAI, Anthropic or OpenRouter. What it costs and how to cap spending.",
+    answer:
+      "The note writer uses your own AI account. The quickest free option is a Google Gemini key from Google AI Studio: sign in, tap Get API key, copy it and paste it into Help me write. You can also sign in with OpenRouter (no copying), or paste an OpenAI or Anthropic key. The key stays in your browser.",
+    published: "2026-09-30",
+    updated: "2026-09-30",
+    howTo: [
+      { name: "Open Help me write", text: "On the Write step of the bouquet maker, tap Help me write next to Your note." },
+      { name: "Pick a provider", text: "Choose Gemini (free tier), OpenRouter (sign in, no copy-paste), ChatGPT (OpenAI) or Claude (Anthropic)." },
+      { name: "Get your key", text: "Follow the steps for your provider below, or tap Sign in with OpenRouter and approve." },
+      { name: "Test and connect", text: "Paste the key and tap Test key & connect. Tick Remember on this device if you want to keep it after closing the tab." },
+      { name: "Write your note", text: "Pick a tone, add a detail or two, and tap one of the three drafts to put it on your card." },
+    ],
+    sections: [
+      {
+        heading: "Why bring your own key?",
+        body: [
+          "Flower Bouquet Digital is free, and the AI note writer stays free because it runs on your own AI account rather than ours. Your key never reaches our servers: your browser talks to the AI provider directly, and the key is kept only in your browser (for the current tab, or on this device if you choose Remember).",
+          "Each set of three drafts costs a fraction of a cent on paid plans, and nothing on Gemini's free tier.",
+        ],
+      },
+      ...PROVIDER_ORDER.map((id) => {
+        const p = PROVIDERS[id];
+        return {
+          heading: `${p.aka === p.name ? p.name : `${p.aka} (${p.name})`}: ${p.free ? "free tier" : "pay as you go"}`,
+          body: [p.cost, `Where to get a key: ${p.keyUrl}`],
+          list: [...p.steps, `Spending limit: ${p.limitTip}`],
+        };
+      }),
+      {
+        heading: "Is it safe to paste my key?",
+        body: [
+          "The key is stored only in your browser and sent only to the provider you picked, over HTTPS. It never goes to our server, database, logs or analytics, and the key field is masked in session recordings. Tap Disconnect to delete it. For extra safety, set a spending limit and create a separate key just for this app, so you can revoke it at any time.",
+        ],
+      },
+      {
+        heading: "Troubleshooting",
+        body: [],
+        list: [
+          "“That key didn't work”: copy the whole key again, or create a new one.",
+          "“Out of credit”: add a little credit on the provider's billing page. A ChatGPT Plus or Claude Pro subscription does not include API credit.",
+          "“Busy or hit your limit”: wait a minute. Free tiers have a daily request limit.",
+          "Want a different model? In the writer, tap Model and enter any model id your account can use.",
+        ],
+      },
+    ],
+    faq: [
+      { q: "Is the AI note writer free?", a: "The writer itself is free. It runs on your own AI account: Google Gemini has a free tier, and paid providers charge a fraction of a cent per set of drafts." },
+      { q: "Do you store my API key?", a: "No. The key stays in your browser and goes straight to the AI provider. It never reaches our servers." },
+      { q: "Which AI providers work?", a: "Google Gemini, OpenAI (ChatGPT), Anthropic (Claude), and OpenRouter, which gives one account access to models from every major provider." },
+      { q: "Does my ChatGPT Plus subscription work?", a: "No. ChatGPT Plus and Claude Pro are app subscriptions; the API is billed separately on the developer platforms. Gemini's free tier or OpenRouter are the easiest alternatives." },
+    ],
+  },
 ];
 
 export const GUIDE_BY_SLUG = new Map(GUIDES.map((g) => [g.slug, g]));
@@ -146,5 +203,9 @@ export const SITE_FAQ: { q: string; a: string }[] = [
   { q: "Where do bouquets I receive go?", a: "Once you open a bouquet, it appears under My bouquets → Received, with your chat and a Send one back button. Sign in to see them on every device." },
   { q: "Can I preview my bouquet without it counting as opened?", a: "Yes. Tap Preview in My bouquets to replay exactly what they see. Your own previews never count as opens." },
   { q: "Can the note be shown right away instead of tucked in?", a: "Yes. On the card step choose Pinned to show the note beside the bouquet, or Tucked in to hide it in the bouquet as a little card they tap to open. They can switch it on their side too, and videos and GIFs follow your choice." },
+  { q: "Can AI help me write the note?", a: "Yes. Tap Help me write on the card step, pick a tone and get three drafts. It uses your own AI account (Gemini has a free tier), and your key stays in your browser." },
+  { q: "Can I add a song or a voice note?", a: "Yes. Paste a Spotify, YouTube or Apple Music link to add a song card, or record a voice note of up to a minute. Both play after they read your note." },
+  { q: "Can I get notified when my bouquet is opened?", a: "Yes. After sending, tap Notify me to get a notification when it's opened or they write back. On iPhone, add the site to your Home Screen first (iOS 16.4 or later)." },
+  { q: "Can I install it as an app?", a: "Yes. From your second bouquet, My bouquets offers Add to home screen. On iPhone, use Share → Add to Home Screen in Safari." },
   { q: "Do I need to sign up?", a: "No. Your sent and received bouquets are saved on your device under My bouquets. Signing in is optional and only syncs them across devices." },
 ];
