@@ -10,6 +10,9 @@ export const DEFAULT_PREFS: PushPrefs = { opened: true, chat: true, reveal: true
 type Sub = { id: string; endpoint: string; p256dh: string; auth: string; prefs: Partial<PushPrefs> | null };
 type Payload = { title: string; body: string; url: string; tag: string };
 
+/** Where a notification tap lands, tagged so GA counts it as a push visit (not "direct"). */
+const landing = (kind: string) => `/garden?utm_source=push&utm_medium=notification&utm_campaign=${kind}`;
+
 let configured: boolean | null = null;
 function ready() {
   if (configured === null) {
@@ -73,7 +76,7 @@ export const notifyOpened = (bouquetId: string, linkName?: string | null) =>
   send(bouquetId, "opened", (b) => ({
     title: `${who(linkName ?? b.recipient_name, "Someone")} opened your bouquet 💐`,
     body: "Tap to see if they wrote back.",
-    url: "/garden",
+    url: landing("opened"),
     tag: `opened-${b.slug}-${linkName ?? ""}`,
   }));
 
@@ -82,7 +85,7 @@ export const notifyChat = (bouquetId: string, msg: { emoji?: string | null; text
   send(bouquetId, "chat", (b) => ({
     title: msg.text ? `New message from ${who(msg.name ?? b.recipient_name)}` : `${who(msg.name ?? b.recipient_name)} reacted ${msg.emoji ?? "💌"}`,
     body: msg.text ? "Open My bouquets to read it." : `To the bouquet you sent${b.recipient_name ? ` ${b.recipient_name}` : ""}.`,
-    url: "/garden",
+    url: landing("chat"),
     tag: `chat-${b.slug}`,
   }));
 
@@ -91,7 +94,7 @@ export const notifyReply = (bouquetId: string, from: string | null | undefined) 
   send(bouquetId, "chat", (b) => ({
     title: `${who(from, b.recipient_name ?? "Someone")} sent you flowers back 🌷`,
     body: "Open My bouquets to see it.",
-    url: "/garden",
+    url: landing("reply"),
     tag: `reply-${b.slug}`,
   }));
 
@@ -100,7 +103,7 @@ export const notifyRevealed = (bouquetId: string) =>
   send(bouquetId, "reveal", (b) => ({
     title: `Your bouquet for ${who(b.recipient_name, "them")} just unlocked 🔓`,
     body: "They can open it now.",
-    url: "/garden",
+    url: landing("reveal"),
     tag: `reveal-${b.slug}`,
   }));
 

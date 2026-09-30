@@ -3,7 +3,7 @@ export const site = {
   wordmark: "flower bouquet digital",
   tagline: "Digital flower bouquets that never wilt",
   description:
-    "Free digital flower bouquet maker. Arrange hand-drawn flowers, write a note and send it as a link that blooms open on any phone. No signup, no app.",
+    "Free digital flower bouquet maker. Arrange hand-drawn flowers, add a note, song or voice message, and send a link that blooms open on any phone. No signup.",
   /** One-sentence entity definition, reused verbatim across the site, llms.txt and JSON-LD. */
   definition:
     "Flower Bouquet Digital is a free online tool for making and sending digital flower bouquets with a personal note, shared as a link.",

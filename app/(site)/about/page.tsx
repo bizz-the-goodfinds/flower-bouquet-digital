@@ -30,6 +30,9 @@ export default function AboutPage() {
           <li>Every flower is hand-drawn and comes with its traditional meaning.</li>
           <li>The recipient doesn&rsquo;t need an app or an account. The link just works.</li>
           <li>It&rsquo;s free, private by default, and made to be shared.</li>
+          <li>Stuck for words? The AI note writer drafts a note in the tone you pick, using your own AI account, so it stays free and private.</li>
+          <li>Say it out loud: add a song from Spotify, YouTube or Apple Music, or a voice note of up to a minute.</li>
+          <li>Install it like an app and get a notification when your bouquet is opened or someone writes back.</li>
         </ul>
         <h2>Contact</h2>
         <p>

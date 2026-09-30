@@ -120,6 +120,12 @@ export function Garden() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slugs]);
 
+  // Arrived by tapping a notification (the service worker adds these tags).
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    if (q.get("utm_source") === "push") track("push_opened", { kind: q.get("utm_campaign") ?? "unknown" });
+  }, []);
+
   // Stay fresh without a refresh: poll while visible, reload when the tab comes back.
   useEffect(() => {
     const tick = () => document.visibilityState === "visible" && load(false);

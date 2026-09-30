@@ -39,6 +39,12 @@ export default function TermsPage() {
           charges you, and for following the provider&rsquo;s terms. Drafts are suggestions; what you send is still yours and still has to be kind.
         </p>
 
+        <h2>Notifications and the app</h2>
+        <p>
+          Notifications and installing the app are optional and free. Notifications depend on your browser&rsquo;s push service, so we can&rsquo;t
+          guarantee every one arrives or arrives on time. Some browsers, such as Brave, turn push off by default.
+        </p>
+
         <h2>Accounts</h2>
         <p>
           Accounts are optional. Keep your password safe; you&rsquo;re responsible for activity on your account. Only create an account with an

@@ -34,6 +34,7 @@ Live: https://flower-bouquet-digital.vercel.app
 - **Scheduled reveal time zones.** The sender picks the time in their own time zone (shown next to the picker). The recipient's countdown and My bouquets show it in the viewer's time zone (`lib/time/zone.ts`).
 - **App and push.** `public/sw.js` caches the app shell (`/`, `/create`, `/garden`) and hashed assets. It never caches `/b/*`, `/api/*` or RSC. Web Push (VAPID) notifies on first open, a new message or reaction, a bouquet sent back, and a scheduled bouquet unlocking (on page visit, plus the daily `/api/cron/reveals`). Subscriptions are in `push_subscriptions` and `push_bouquets`. Endpoints are allowlisted to real push services.
 - **Asking for push and install** (`components/pwa/nudge.tsx`, `lib/pwa/nudge.ts`). One card per visit, 12 s in, never on `/create`, `/b/*` or auth pages. Push is offered to people who have sent a bouquet; install from the second visit. "Not now" waits 3, then 10, then 30 days, and stops after 4 asks. Accepting ends it. The browser's own permission prompt only appears after a tap.
+- **Push attribution.** Notification taps land on `/garden?utm_source=push&utm_medium=notification&utm_campaign=<opened|chat|reply|reveal>`, so GA counts them as push traffic.
 - **Brave:** push is off by default ("Registration failed - push service error"). Enable "Use Google services for push messaging" in `brave://settings/privacy`. The app says this when it happens.
 
 ## Local setup
@@ -85,7 +86,7 @@ server-side already confirmed (`/api/auth/signup`), so no verification email is 
 ## Project map
 
 ```
-app/(site)/          landing, /flowers, /occasions, /guides, /faq, legal, /garden, /account/reset
+app/(site)/          landing, /flowers, /occasions, /guides (incl. /guides/ai-note-writer-api-key), /faq, legal, /garden, /account/reset
 app/(app)/create/    builder (header only, full-height)
 app/b/[slug]/        recipient page (noindex) + dynamic Open Graph image
 app/b/[slug]/og/     teaser link-preview image (sealed envelope)
@@ -97,6 +98,7 @@ lib/server/          bouquet loading, threads, personal links, chat grouping, so
 lib/ai/              AI note writer providers + browser key storage
 lib/pwa/             service worker registration, install prompt, push client, ask backoff
 lib/garden/          streak and badge rules, badge share image
+lib/time/            time zone formatting for scheduled reveals
 public/sw.js         service worker (app shell cache + Web Push)
 lib/content/         flower meanings, occasions, guides (drives SEO pages + llms.txt)
 lib/seo/             JSON-LD helpers, llms.txt generators
@@ -145,6 +147,8 @@ Events go to Firebase Analytics (GA4) and Clarity through `track()` in `lib/anal
 | `select_content` | link to an occasion, flower or guide page | `content_type`, `item_id`, `placement` |
 | `web_vitals` | each Core Web Vital | `metric_name`, `metric_value` (CLS ×1000), `rating` |
 | `page_not_found` | 404 page | — |
+| `faq_opened` | an FAQ answer is expanded | `question` |
+| `mobile_menu_opened` | the mobile menu is opened | — |
 | any `data-track` | click on the element, or open for `<details>` | every `data-track-*` attribute, snake_cased |
 
 Every automatic event also carries `page_path`. To track a new element, add `data-track="event_name"` plus any `data-track-some-param="value"` instead of writing a handler. `<TrackOnMount name="…" />` fires one event when a server-rendered page mounts.
@@ -161,7 +165,7 @@ Every automatic event also carries `page_path`. To track a new element, add `dat
 - **AI note writer:** `ai_writer_opened`, `ai_setup_started`, `ai_key_connected` (`provider`, `method` paste|oauth, `remember`), `ai_key_failed` (`provider`, `reason`), `ai_oauth_started`, `ai_note_generated` (`provider`, `tone`, `tweak`), `ai_note_failed`, `ai_note_used`, `ai_key_disconnected`. The key, prompt and draft text are never sent.
 - **Song and voice:** `song_added` (`provider`), `song_removed`, `song_played`, `voice_recorded` (`seconds`), `voice_removed`, `voice_mic_denied`, `voice_played`. `bouquet_created` also carries `has_song` and `has_voice`.
 - **Garden stats:** `garden_stats_toggled`, `badge_earned_shown` (`badge`), `badge_shared`
-- **Install and push:** `nudge_shown` / `nudge_accepted` / `nudge_dismissed` (`kind` push|install, `ask`), `install_clicked`, `install_prompt_result` (`outcome`, `where`), `install_dismissed`, `push_prompt_accepted`, `push_enabled` (`where`), `push_denied`, `push_prefs_changed`, `push_disabled`
+- **Install and push:** `app_installed`, `app_opened_installed` (`notification`: opened from a push), `push_opened` (`kind`, fired on My bouquets when a notification is tapped), `nudge_shown` / `nudge_accepted` / `nudge_dismissed` (`kind` push|install, `ask`), `install_clicked`, `install_prompt_result` (`outcome`, `where`), `install_dismissed`, `push_prompt_accepted`, `push_enabled` (`where`), `push_denied`, `push_prefs_changed`, `push_disabled`
 
 **Traffic attribution.** Links shared through a channel carry `utm_source=<channel>&utm_medium=share` (`withUtm()`):
 - Channels: whatsapp, telegram, x, sms, email, native_share, qr.

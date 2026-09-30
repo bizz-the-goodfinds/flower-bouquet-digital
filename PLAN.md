@@ -416,16 +416,21 @@ The full event and parameter reference is in README.md → Analytics. In short:
 - **Sharing:** channel clicks, personal links created/deleted, downloads and export failures.
 - **Recipient:** viewed (with source, occasion, personal link), locked view, unwrapped, note opened/pinned, chat toggled, reactions, replies, send-back, reports.
 - **My bouquets:** tabs, previews, deletes, claims, sign-in/sign-up (including failures), password resets, sync prompt.
+- **v2, AI note writer:** writer opened, setup started, key connected (provider, paste or OAuth, remembered), key failed (reason), drafts generated (provider, tone, tweak), draft used, disconnected. Never the key, prompt or draft text.
+- **v2, song and voice:** song added/removed/played (provider), voice recorded (seconds)/removed/played, mic denied. `bouquet_created` has `has_song` and `has_voice`.
+- **v2, garden:** stats panel toggled, badge celebration shown, badge shared.
+- **v2, app and push:** nudge shown/accepted/dismissed (kind, ask number), install clicked/result/dismissed, app installed, opened from the installed app, push prompt accepted, push enabled (where)/denied/disabled, preference changed, notification tapped (`push_opened`).
 
 ### Traffic attribution (built)
 - Share links carry `utm_source=<channel>&utm_medium=share`.
   - Channels: whatsapp, telegram, x, sms, email, native_share, qr.
   - Without these tags, opens from in-app browsers (which send no referrer) would show as "direct".
 - The copy-link URL stays clean.
+- Notification taps carry `utm_source=push&utm_medium=notification&utm_campaign=<opened|chat|reply|reveal>`.
 
 ### GA4 admin (to do once)
-- Register `placement`, `occasion`, `source`, `channel`, `flower_slug`, `metric_name` and `content_type` as custom dimensions.
-- Mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events.
+- Register `placement`, `occasion`, `source`, `channel`, `flower_slug`, `metric_name` and `content_type` as custom dimensions. v2 adds `provider`, `tone`, `method`, `kind`, `badge` and `where`.
+- Mark `bouquet_created`, `bouquet_unwrapped` and `signup_completed` as key events. v2 adds `ai_note_used`, `push_enabled` and `app_installed`.
 - Keep Enhanced measurement → "Page changes based on browser history events" on.
 
 ### Questions the data should answer
@@ -434,6 +439,10 @@ The full event and parameter reference is in README.md → Analytics. In short:
 - Which share channel brings the most opens? `bouquet_viewed.source` shows this.
 - How many recipients unwrap, react or send one back?
 - Which landing sections and content pages drive `cta_clicked`?
+- Does the AI writer help people finish? Compare `bouquet_created` for sessions with `ai_note_used` against those without, and look at `ai_key_failed` reasons.
+- Do bouquets with a song or voice note get more reactions and send-backs?
+- How many senders turn on push, and do they come back more (`push_opened`, `app_opened_installed`)?
+- How does each ask convert (`nudge_accepted` ÷ `nudge_shown` by `ask`)?
 
 North-star metric: **bouquets opened per week**. Viral coefficient = send-back bouquets created ÷ bouquets opened.
 
@@ -442,18 +451,18 @@ North-star metric: **bouquets opened per week**. Viral coefficient = send-back b
 ## 10. Pages & routes
 
 ```
-/                         landing (hero bouquet animation, CTA, how it works, FAQ)
-/create                   builder (?preset=birthday, ?replyTo=slug)
-/create/note              note step (or same page, step 2)
-/b/[slug]                 recipient view (noindex)
-/b/[slug]/edit            edit with token
-/garden                   my bouquets (logged in)
-/flowers                  flower meanings index
-/flowers/[slug]           single flower meaning
-/occasions/[slug]         occasion page + presets
-/guides/[slug]            articles
+/                         landing (hero bouquet animation, CTA, how it works, features, FAQ)
+/create                   builder: arrange → write → send (?occasion=, ?flowers=, ?replyTo=&to=, ?edit=, ?ref=, ?resume=write)
+/b/[slug]                 recipient view (noindex; ?r=<personal link key>), /b/[slug]/og teaser image
+/garden                   My bouquets: sent + received, chat, garden stats, notifications (noindex)
+/flowers, /flowers/[slug] flower meanings
+/occasions, /occasions/[slug]  occasion pages + presets
+/guides, /guides/[slug]   articles (incl. ai-note-writer-api-key)
 /faq, /about, /privacy, /terms
-/llms.txt, /llms-full.txt, /sitemap.xml, /robots.txt
+/account/reset            password reset
+/ai/callback              OpenRouter sign-in return (noindex, disallowed)
+/api/…                    bouquets, reactions, reports, song, voice, garden/stats, push/(subscribe|prefs), cron/reveals, auth/signup
+/llms.txt, /llms-full.txt, /sitemap.xml, /robots.txt, /manifest.webmanifest, /sw.js
 ```
 
 ---
@@ -462,26 +471,29 @@ North-star metric: **bouquets opened per week**. Viral coefficient = send-back b
 
 ```
 app/
-  (marketing)/page.tsx, faq/, about/, flowers/, occasions/, guides/
-  create/                 builder
-  b/[slug]/               recipient view + opengraph-image.tsx
-  garden/
-  api/bouquets/, api/reactions/, api/reports/
-  sitemap.ts, robots.ts, llms.txt/route.ts
+  (site)/                 landing, faq, about, flowers, occasions, guides, garden, privacy, terms, account/reset
+  (app)/create/           builder
+  b/[slug]/               recipient view, og teaser image
+  ai/callback/            OpenRouter sign-in return
+  api/                    bouquets/*, reactions, reports, song, voice, garden/stats, push/*, cron/reveals, auth/signup
+  sitemap.ts, robots.ts, manifest.ts, llms.txt/, llms-full.txt/
 components/
-  builder/  (Canvas, FlowerTray, Toolbar, Stem, ShuffleButton)
-  card/     (NoteCard, FontPicker)
-  reveal/   (Envelope, Bloom, CardFlip)
-  ui/       (Button, Sheet, Toast ...)
+  builder/                canvas, tray, toolbars, card step, attachments (song + voice), turnstile
+  ai/                     note writer (setup + drafts)
+  bouquet/                bouquet SVG, note card, note extras (song card, players)
+  reveal/                 recipient view, envelope, note tag/pin/open, chat, countdown
+  garden/                 My bouquets, garden stats + badges, sender preview
+  pwa/                    SW registration, install card + iOS guide, push prompt/settings, engagement nudge
+  share/, marketing/, analytics/, ui/ (sheet, tooltip, confirm dialog, loaders)
 lib/
-  supabase/ (client.ts, server.ts, admin.ts)
-  analytics/ (track.ts → Clarity + Firebase)
-  seo/      (jsonld.ts, metadata.ts)
-  composition/ (schema.ts, shuffle.ts, export.ts)
-content/    (flowers.json, occasions MDX, guides MDX)
-supabase/
-  migrations/  seed.sql
-public/     (icons, fonts fallback)
+  bouquet/                art, catalog, composition, card schema, media (song/voice), store, export, animate
+  ai/                     providers + browser key storage
+  pwa/                    client (SW, install, push) + ask backoff
+  garden/                 badges/streak rules, badge image
+  server/                 bouquets, chat, song lookup, voice storage, push, security, turnstile
+  content/, seo/, analytics/, supabase/, time/
+supabase/migrations/      0001–0006
+public/                   icons, sw.js
 ```
 
 ---

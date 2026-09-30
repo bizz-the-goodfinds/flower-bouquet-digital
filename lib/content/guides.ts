@@ -134,9 +134,8 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "ai-note-writer-api-key",
-    title: "How to Get an AI API Key for the Note Writer (Gemini, ChatGPT, Claude, OpenRouter)",
-    metaDescription:
-      "Connect your own AI to the Flower Bouquet Digital note writer: how to get a free Gemini key, or an OpenAI, Anthropic or OpenRouter key, what it costs and how to set a spending limit.",
+    title: "AI Note Writer: Get a Free Gemini, ChatGPT or Claude Key",
+    metaDescription: "Connect your own AI to the bouquet note writer: get a free Gemini key, or use OpenAI, Anthropic or OpenRouter. What it costs and how to cap spending.",
     answer:
       "The note writer uses your own AI account. The quickest free option is a Google Gemini key from Google AI Studio: sign in, tap Get API key, copy it and paste it into Help me write. You can also sign in with OpenRouter (no copying), or paste an OpenAI or Anthropic key. The key stays in your browser.",
     published: "2026-09-30",
