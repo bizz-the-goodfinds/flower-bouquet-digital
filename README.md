@@ -25,12 +25,23 @@ Live: https://flower-bouquet-digital.vercel.app
 - **Threads.** "Send one back" sets `reply_to`; `thread_id` is the first bouquet's id. My bouquets groups sent and received bouquets by thread; the recipient page shows only direct ancestors (never other people's replies).
 - **Sender preview.** My bouquets → Preview replays the recipient view with every chat. It never counts as an open, and `/view` ignores the signed-in owner.
 
+## v2: AI writer, song and voice, garden stats, app and push
+
+- **AI note writer (bring your own key).** `lib/ai/providers.ts` calls Gemini, OpenAI, Anthropic or OpenRouter straight from the browser (all allow CORS). The key lives in `sessionStorage`, or in `localStorage` with "Remember" (`lib/ai/key.ts`), and never reaches our server. OpenRouter sign-in uses OAuth PKCE and returns to `/ai/callback`. The setup guide is at `/guides/ai-note-writer-api-key`.
+- **Song.** `/api/song` looks up a Spotify / YouTube / Apple Music link (oEmbed, plus Open Graph for the artist). The server looks it up again on create and edit. The player is an iframe that loads only on tap.
+- **Voice note.** Recorded with MediaRecorder (max 60 s) and uploaded at once to `/api/voice`, which stores it in the private `voice-notes` bucket under `pending/` and returns an HMAC-signed path. On send it moves to `b/<bouquet id>`. It plays through 1-hour signed URLs and is deleted with the bouquet.
+- **Your garden.** `/api/garden/stats` computes the weekly streak, totals, referrals (`ref_bouquet_id`, distinct IP hashes) and badges (`lib/garden/badges.ts`). The panel is collapsible, closed by default.
+- **Scheduled reveal time zones.** The sender picks the time in their own time zone (shown next to the picker). The recipient's countdown and My bouquets show it in the viewer's time zone (`lib/time/zone.ts`).
+- **App and push.** `public/sw.js` caches the app shell (`/`, `/create`, `/garden`) and hashed assets. It never caches `/b/*`, `/api/*` or RSC. Web Push (VAPID) notifies on first open, a new message or reaction, a bouquet sent back, and a scheduled bouquet unlocking (on page visit, plus the daily `/api/cron/reveals`). Subscriptions are in `push_subscriptions` and `push_bouquets`. Endpoints are allowlisted to real push services.
+- **Asking for push and install** (`components/pwa/nudge.tsx`, `lib/pwa/nudge.ts`). One card per visit, 12 s in, never on `/create`, `/b/*` or auth pages. Push is offered to people who have sent a bouquet; install from the second visit. "Not now" waits 3, then 10, then 30 days, and stops after 4 asks. Accepting ends it. The browser's own permission prompt only appears after a tap.
+- **Brave:** push is off by default ("Registration failed - push service error"). Enable "Use Google services for push messaging" in `brave://settings/privacy`. The app says this when it happens.
+
 ## Local setup
 
 ```bash
 pnpm install
 cp .env.example .env.local   # fill in values
-node --env-file=.env.local scripts/migrate.mjs   # applies supabase/migrations/* (0004 adds threads, chat, personal links, receipts)
+node --env-file=.env.local scripts/migrate.mjs   # applies supabase/migrations/* (0006 adds song, voice, push, badges, referrals)
 pnpm dev
 ```
 
@@ -48,6 +59,10 @@ pnpm dev
 | `NEXT_PUBLIC_FIREBASE_*` | Vercel + local | Web app config incl. `MEASUREMENT_ID` |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | optional | Cloudflare Turnstile on bouquet creation; off when empty |
 | `NEXT_PUBLIC_AUTH_GOOGLE` | optional | `1` shows "Continue with Google" (enable the provider in Supabase first) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Vercel + local | Web Push keys (`npx web-push generate-vapid-keys`). Private key is **secret** |
+| `VAPID_SUBJECT` | Vercel + local | `mailto:` contact for push services |
+| `CRON_SECRET` | Vercel | Random string; Vercel Cron sends it to `/api/cron/reveals` |
+| `VOICE_SIGNING_SECRET` | optional | Signs voice note paths; falls back to the service role key |
 
 ## Optional sign-in (Supabase Auth)
 
@@ -74,9 +89,15 @@ app/(site)/          landing, /flowers, /occasions, /guides, /faq, legal, /garde
 app/(app)/create/    builder (header only, full-height)
 app/b/[slug]/        recipient page (noindex) + dynamic Open Graph image
 app/b/[slug]/og/     teaser link-preview image (sealed envelope)
-app/api/             bouquets (create/edit/delete/view/mine/received/receive/links/chat), reactions, reports
+app/api/             bouquets (create/edit/delete/view/mine/received/receive/links/chat), reactions, reports,
+                     song, voice, garden/stats, push/(subscribe|prefs), cron/reveals
+app/ai/callback/     OpenRouter sign-in return (noindex)
 lib/bouquet/         art, catalog, composition (layout, SVG render), card schema, chat types, store, PNG/video/GIF export
-lib/server/          bouquet loading, threads, personal links, chat grouping
+lib/server/          bouquet loading, threads, personal links, chat grouping, song lookup, voice storage, push
+lib/ai/              AI note writer providers + browser key storage
+lib/pwa/             service worker registration, install prompt, push client, ask backoff
+lib/garden/          streak and badge rules, badge share image
+public/sw.js         service worker (app shell cache + Web Push)
 lib/content/         flower meanings, occasions, guides (drives SEO pages + llms.txt)
 lib/seo/             JSON-LD helpers, llms.txt generators
 supabase/migrations/ SQL schema
@@ -137,6 +158,10 @@ Every automatic event also carries `page_path`. To track a new element, add `dat
   - `bouquet_locked_viewed`, `bouquet_unwrapped`, `note_opened`, `note_pinned`, `chat_toggled`, `reaction_sent`, `sender_reply_sent`, `send_back_clicked`, `report_opened`, `bouquet_reported`
 - **My bouquets:** `garden_tab`, `sent_preview_opened`, `bouquet_deleted`, `received_removed`, `bouquets_claimed`, `sync_prompt_opened`, `sync_prompt_dismissed`, `login_started`, `login`, `signup_completed`, `auth_failed`, `password_reset_requested`
 - **Consent and errors:** `consent_granted` (EU accept), `app_error`
+- **AI note writer:** `ai_writer_opened`, `ai_setup_started`, `ai_key_connected` (`provider`, `method` paste|oauth, `remember`), `ai_key_failed` (`provider`, `reason`), `ai_oauth_started`, `ai_note_generated` (`provider`, `tone`, `tweak`), `ai_note_failed`, `ai_note_used`, `ai_key_disconnected`. The key, prompt and draft text are never sent.
+- **Song and voice:** `song_added` (`provider`), `song_removed`, `song_played`, `voice_recorded` (`seconds`), `voice_removed`, `voice_mic_denied`, `voice_played`. `bouquet_created` also carries `has_song` and `has_voice`.
+- **Garden stats:** `garden_stats_toggled`, `badge_earned_shown` (`badge`), `badge_shared`
+- **Install and push:** `nudge_shown` / `nudge_accepted` / `nudge_dismissed` (`kind` push|install, `ask`), `install_clicked`, `install_prompt_result` (`outcome`, `where`), `install_dismissed`, `push_prompt_accepted`, `push_enabled` (`where`), `push_denied`, `push_prefs_changed`, `push_disabled`
 
 **Traffic attribution.** Links shared through a channel carry `utm_source=<channel>&utm_medium=share` (`withUtm()`):
 - Channels: whatsapp, telegram, x, sms, email, native_share, qr.

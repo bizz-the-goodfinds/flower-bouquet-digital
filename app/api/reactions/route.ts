@@ -1,7 +1,9 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { REACTIONS } from "@/lib/bouquet/card";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { CONVERSATION_RE, conversationAllowed } from "@/lib/server/bouquets";
+import { CONVERSATION_RE, conversationAllowed, getLink } from "@/lib/server/bouquets";
+import { notifyChat } from "@/lib/server/push";
 import { MESSAGE_COLS, toMessage, type Msg } from "@/lib/server/chat";
 import { ipHash, isAbusive, json } from "@/lib/server/security";
 
@@ -41,5 +43,9 @@ export async function POST(req: Request) {
     .select(MESSAGE_COLS)
     .single<Msg>();
   if (error) return json({ error: "Couldn't send. Try again." }, 500);
+  after(async () => {
+    const link = conversation?.startsWith("l:") ? await getLink(b.id, conversation.slice(2)) : null;
+    await notifyChat(b.id, { emoji, text: reply, name: link?.name });
+  });
   return json({ ok: true, message: toMessage(data) }, 201);
 }

@@ -3,6 +3,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { Consent } from "@/components/analytics/consent";
 import { AnalyticsListeners } from "@/components/analytics/listeners";
+import { PwaRegister } from "@/components/pwa/register";
+import { EngagementNudge } from "@/components/pwa/nudge";
 import { geist, geistMono, playfair } from "@/lib/fonts";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -50,6 +52,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <Consent />
         <AnalyticsListeners />
+        <PwaRegister />
+        <EngagementNudge />
         {/* These scripts are served by Vercel's edge; elsewhere (local, preview servers) they 404. */}
         {process.env.VERCEL && (
           <>

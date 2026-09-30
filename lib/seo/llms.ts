@@ -10,9 +10,12 @@ export function llmsTxt() {
 
 ${site.name} lets anyone arrange hand-drawn flowers into a bouquet, add a personal note, and send it as a link that unwraps and blooms on the recipient's phone. It is free, needs no account or app, and supports scheduled reveals, a link preview that shows only a sealed envelope (the flowers stay a surprise), image/story/video/GIF downloads, personal links for sending one bouquet to several people, emoji reactions with a private sender–recipient chat, "send one back" replies grouped into threads, and a My bouquets page with sent and received bouquets.
 
+Notes can carry a song card (Spotify, YouTube or Apple Music link, played only when tapped) and a voice note of up to a minute. An optional AI note writer ("Help me write") suggests three drafts in a chosen tone using the sender's own AI key (Google Gemini, OpenAI, Anthropic or OpenRouter); the key stays in the browser and the site never pays for or sees AI requests. My bouquets shows a weekly sending streak, badges and how many people sent flowers after opening yours. The site installs as an app (PWA) and can send push notifications when a bouquet is opened, answered or unlocks.
+
 ## Product
 - [Bouquet maker](${absoluteUrl("/create")}): build and send a digital bouquet
 - [FAQ](${absoluteUrl("/faq")}): pricing, privacy, sharing, scheduling
+- [AI note writer setup](${absoluteUrl("/guides/ai-note-writer-api-key")}): get a free Gemini key or connect OpenAI, Anthropic or OpenRouter
 - [About](${absoluteUrl("/about")})
 
 ## Occasions

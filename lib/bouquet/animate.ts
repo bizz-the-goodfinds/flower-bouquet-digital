@@ -1,6 +1,7 @@
 "use client";
 
 import { BACKGROUNDS, DEFAULTS } from "./catalog";
+import { SONG_PROVIDERS, type Song } from "./media";
 import { CARD_FONTS, CARD_TEMPLATES, TAG_HANG, normalizeCardFont, normalizeNoteMode, type CardStyle } from "./card";
 import { CANVAS, bouquetLayers, normalizeDesign, tieOf, type Design } from "./composition";
 import { ENVELOPE_COLORS, envelopeSvg, normalizeEnvelope } from "./envelope";
@@ -12,7 +13,7 @@ import { site } from "../site";
  * to a video (MP4 where supported, else WebM) or an animated GIF. Everything runs on-device.
  */
 
-export type AnimSource = { design: Design; to: string; from: string; message: string; style: CardStyle };
+export type AnimSource = { design: Design; to: string; from: string; message: string; style: CardStyle; song?: Song | null };
 
 type Assets = {
   bg: string;
@@ -299,6 +300,17 @@ function drawFrame(ctx: CanvasRenderingContext2D, A: Assets, st: Stage, ms: numb
     }
   }
 
+  // The song card, as a static sticker above the brand once the note is out.
+  if (src.song) {
+    const a = clamp01((ms - st.tl.card - 600) / 500);
+    if (a > 0) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      drawSongPill(ctx, src.song, W, H, fonts, st.story);
+      ctx.restore();
+    }
+  }
+
   drawBrand(ctx, A, st);
 }
 
@@ -496,6 +508,50 @@ export function drawBrandPill(ctx: CanvasRenderingContext2D, logo: HTMLImageElem
   ctx.globalAlpha = 0.6;
   ctx.font = urlFont;
   ctx.fillText(domain, tx, y + h * 0.8);
+  ctx.restore();
+}
+
+/** Where drawBrandPill puts its top edge. */
+const brandTop = (W: number, H: number, story: boolean) => H - Math.round(W * (story ? 0.085 : 0.09)) - H * (story ? 0.035 : 0.025);
+
+/**
+ * Static song card sitting just above the brand pill: a coloured music tile, title and artist.
+ * Artwork isn't drawn: third-party images would taint the canvas and block the export.
+ */
+export function drawSongPill(ctx: CanvasRenderingContext2D, song: Song, W: number, H: number, fonts: { display: string; mono: string }, story: boolean) {
+  const h = Math.round(W * (story ? 0.085 : 0.09));
+  const w = Math.min(W * 0.8, W - 40);
+  const x = (W - w) / 2;
+  const y = brandTop(W, H, story) - h - h * 0.3;
+  const tile = h * 0.72;
+  const pad = (h - tile) / 2;
+  const p = SONG_PROVIDERS[song.provider];
+  ctx.save();
+  ctx.fillStyle = "#1B1A17";
+  roundRect(ctx, x + 4, y + 4, w, h, h * 0.28);
+  ctx.fill();
+  ctx.fillStyle = "#FFFDF8";
+  roundRect(ctx, x, y, w, h, h * 0.28);
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#1B1A17";
+  ctx.stroke();
+  ctx.fillStyle = p.color;
+  roundRect(ctx, x + pad, y + pad, tile, tile, tile * 0.22);
+  ctx.fill();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.textAlign = "center";
+  ctx.font = `${Math.round(tile * 0.55)}px ${fonts.display}`;
+  ctx.fillText("♪", x + pad + tile / 2, y + pad + tile * 0.7);
+  const tx = x + pad * 2 + tile;
+  const max = w - (tx - x) - pad * 1.5;
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#1B1A17";
+  ctx.font = `600 ${Math.round(h * 0.26)}px ${fonts.mono}`;
+  ctx.fillText(fit(ctx, song.title, max), tx, y + h * (song.artist ? 0.45 : 0.58));
+  ctx.globalAlpha *= 0.65;
+  ctx.font = `${Math.round(h * 0.2)}px ${fonts.mono}`;
+  ctx.fillText(fit(ctx, `${song.artist ? `${song.artist} · ` : ""}${p.name}`, max), tx, y + h * 0.75);
   ctx.restore();
 }
 

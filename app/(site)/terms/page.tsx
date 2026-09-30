@@ -14,7 +14,7 @@ export default function TermsPage() {
     <div className="mx-auto max-w-3xl px-4 py-10">
       <Breadcrumbs items={[{ name: "Terms", path: "/terms" }]} />
       <h1 className="mt-6 font-display text-5xl">Terms of use</h1>
-      <p className="mt-2 font-mono text-xs text-ink-soft">Last updated September 29, 2026</p>
+      <p className="mt-2 font-mono text-xs text-ink-soft">Last updated September 30, 2026</p>
       <div className="prose-flower mt-4">
         <p>
           By using {site.name} you agree to these terms and to our <Link href="/privacy">privacy policy</Link>. They are short on purpose.
@@ -30,6 +30,13 @@ export default function TermsPage() {
         <p>
           You own what you write. You give us permission to store your bouquet and show it to people who have its link, so the service works. You
           are responsible for what you send.
+        </p>
+
+        <h2>Songs, voice notes and AI</h2>
+        <p>
+          Only attach songs you&rsquo;re happy for the recipient to play, and only record your own voice. Voice notes follow the same rules as
+          notes and can be reported. The AI note writer runs on your own AI account: you are responsible for your key, for what the provider
+          charges you, and for following the provider&rsquo;s terms. Drafts are suggestions; what you send is still yours and still has to be kind.
         </p>
 
         <h2>Accounts</h2>

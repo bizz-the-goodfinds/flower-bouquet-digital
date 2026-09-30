@@ -589,12 +589,27 @@ See the checklist in the chat reply / below.
 - Submit the sitemap to Google Search Console and Bing Webmaster Tools; verify Clarity masking on production.
 - Sign-ups are not email-verified, so someone could register an email they don't own. Acceptable for syncing bouquets; revisit before adding anything sensitive.
 
-### v2 inputs (needed before the v2 build)
-1. **Web Push:** a contact email for the VAPID `mailto:` subject (it can be the same as the privacy/terms contact email). The VAPID key pair gets generated during the build and goes into Vercel env.
-2. **AI testing:** your own key for at least one provider, or an OpenRouter account, entered in the app to test it, not in chat. No app registration is needed on our side, including for OpenRouter sign-in.
-3. **Supabase:** run `0006_v2.sql` after the build (it also creates the `voice-notes` bucket).
-4. **Decisions** (defaults in section 3 are used unless you say otherwise): which AI providers to support, whether the key is remembered by default, voice note length (60s), song sources (Spotify, YouTube, Apple Music), weekly streaks, push triggers.
+### v2 (built 2026-09-30, branch `feat/v2`)
+- **AI note writer (BYOK):** "Help me write" on the Write step. Six tones, optional details, 3 drafts, Shorter / More emoji / Try again. Providers: Gemini (`gemini-flash-lite-latest`), OpenAI (`gpt-5.4-mini`), Anthropic (`claude-haiku-4-5`), OpenRouter (`google/gemini-3.5-flash-lite`, OAuth PKCE sign-in via `/ai/callback`). The browser calls each provider directly (CORS checked for all four), so no pass-through route was needed. Key in sessionStorage, or localStorage with "Remember"; a model override and Disconnect are in the writer. Guide page: `/guides/ai-note-writer-api-key`. Code: `lib/ai/`, `components/ai/note-writer.tsx`.
+- **Song:** Spotify / YouTube / Apple Music links are parsed in `lib/bouquet/media.ts` and looked up server-side in `lib/server/song.ts` (oEmbed, plus Open Graph for the artist and Apple titles). They are looked up again on create/edit and never trusted from the client. The player loads on tap only (YouTube uses its nocookie domain). Image, video and GIF exports draw a static song card (no artwork, since third-party images would taint the canvas).
+- **Voice note:** MediaRecorder (WebM/Opus or MP4/AAC), 60 s cap, re-record and delete. The file uploads right away to `voice-notes/pending/…` through `/api/voice` (2 MB cap, 20 per IP per hour), and the server HMAC-signs the path. On send it moves to `b/<bouquet id>.<ext>`. Playback uses 1-hour signed URLs. It is deleted with the bouquet or when removed in an edit.
+- **Streaks, badges, referrals:** `/api/garden/stats`, `lib/garden/badges.ts`, and a "Your garden" strip at the top of My bouquets. The streak is weekly (UTC, Monday start). 9 badges, each with a celebration and a shareable PNG. Badge dates are stored in `badges` for accounts and in localStorage otherwise. Referrals are set from "Send one back", `?ref=`, or the last bouquet this device opened (30 days), counted as distinct IP hashes, and never counted for sending to yourself.
+- **PWA and push:** `public/sw.js` (app shell for `/`, `/create` and `/garden` network-first; hashed assets cache-first; `/b/*`, `/api/*` and RSC never cached). The install prompt (Android and desktop) or the iOS guide shows from the 2nd bouquet. Push: an opt-in on the sent screen and settings in My bouquets. Notifications fire on first open (per personal link), a recipient message or reaction, a bouquet sent back, and a scheduled bouquet unlocking (when the page is visited, plus a daily Vercel cron). Push endpoints are allowlisted to real push services to prevent SSRF. Notifications never include message text.
+- **Supporting:** migration `0006_v2.sql`, `web-push`, `Permissions-Policy: microphone=(self)`, and privacy, terms, FAQ and llms.txt updates. Analytics events: `ai_*`, `song_*`, `voice_*`, `push_*`, `install_*` and `badge_*`.
+
+### v2.1 (2026-09-30): polish after first test
+- Fixed: a long song title or the recording bar overflowed the Write column (a `<fieldset>` has `min-width: min-content`).
+- Scheduled reveal: the picker shows the sender's time zone and the exact opening moment. The recipient countdown and My bouquets show it in the viewer's own time zone, and past times can't be picked.
+- Push: "Registration failed - push service error" comes from Brave, which has push off by default. It is now explained with the fix. Tested end to end in Chrome: subscribe, save, preferences, FCM delivery (201), unsubscribe. A subscription made with an old VAPID key is replaced.
+- Asking: a page-level card (`EngagementNudge`) asks for notifications (people who've sent a bouquet) or install (from the 2nd visit), 12 s into a visit. "Not now" backs off 3 / 10 / 30 days, up to 4 asks, shared with the in-context cards.
+- My bouquets: notification settings and the install card sit right under the sign-in box. "Your garden" is a collapsible panel, closed by default, with a one-line summary.
+
+### v2 before merging
+1. Run `node --env-file=.env.local scripts/migrate.mjs` (applies `0006_v2.sql`). **Deploying before this breaks bouquet creation**, because inserts write the new columns.
+2. Add to Vercel env: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` and `CRON_SECRET` (all four are in `.env.local`).
+3. The Vercel cron is daily (Hobby limit). On Pro, change `vercel.json` to `*/15 * * * *` for timelier "unlocked" pushes.
+4. Test on real devices: mic recording on iOS Safari and Android Chrome, playback in in-app browsers (Instagram, WhatsApp), push on Android and on iOS 16.4+ from the home screen, and install.
+5. Clean up orphaned `voice-notes/pending/*` files (recorded but never sent) with a periodic job. Not built yet.
 
 ### Not started
-- v2: everything in section 3 → v2.
 - v3: monetization, commissioned flower art, Sentry.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { TrackOnMount } from "@/components/analytics/listeners";
 import { Countdown } from "@/components/reveal/countdown";
 import { Envelope } from "@/components/reveal/envelope";
@@ -9,6 +10,7 @@ import { Logo } from "@/components/ui/logo";
 import { cardFontVars } from "@/lib/fonts";
 import { OG_SIZE } from "@/lib/og";
 import { getAncestors, getBouquet, getLink, teaser } from "@/lib/server/bouquets";
+import { notifyDueReveals } from "@/lib/server/push";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,8 @@ export default async function BouquetPage({ params, searchParams }: PageProps<"/
   const { slug } = await params;
   const state = await getBouquet(slug);
   if (state.status === "missing") notFound();
+  // A scheduled bouquet that just unlocked: tell the sender now rather than waiting for the cron.
+  if (state.status === "ok" && state.meta.revealPending) after(() => notifyDueReveals([state.meta.id]));
   // Both only need the bouquet row, so fetch them together.
   const [link, thread] = await Promise.all([getLink(state.meta.id, one((await searchParams).r)), state.status === "locked" ? [] : getAncestors(state.meta)]);
 

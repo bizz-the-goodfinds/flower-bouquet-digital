@@ -4,7 +4,7 @@ import { GUIDES } from "@/lib/content/guides";
 import { OCCASIONS } from "@/lib/content/occasions";
 import { absoluteUrl } from "@/lib/site";
 
-const UPDATED = new Date("2026-09-29");
+const UPDATED = new Date("2026-09-30");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const page = (path: string, priority: number, changeFrequency: "weekly" | "monthly" | "yearly" = "monthly") => ({

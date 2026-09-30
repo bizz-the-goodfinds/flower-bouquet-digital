@@ -16,6 +16,11 @@ import { OCCASION_BY_SLUG } from "@/lib/content/occasions";
 import { addMine } from "@/lib/local";
 import { track } from "@/lib/analytics/track";
 import { TURNSTILE_SITE_KEY, Turnstile } from "./turnstile";
+import { Attachments } from "./attachments";
+import { NoteWriterButton } from "@/components/ai/note-writer";
+import { NoteExtras } from "@/components/bouquet/note-extras";
+import { getRef } from "@/lib/local";
+import { fmtZoned, zoneName } from "@/lib/time/zone";
 
 const MAX_MSG = 500;
 
@@ -36,6 +41,20 @@ export function CardStep() {
   const ideas = occasion ? OCCASION_BY_SLUG.get(occasion)?.messages ?? [] : [];
 
   const [confirm, setConfirm] = useState<{ reveal: string | null; honeypot: string } | null>(null);
+  // The reveal is picked in the sender's own time zone; show which one, and the exact moment it opens.
+  const [zone] = useState(() => (typeof window === "undefined" ? "" : zoneName()));
+  const [minLocal] = useState(() => {
+    const d = new Date(Date.now() + 5 * 60_000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+  });
+  const revealDate = scheduled && revealAt && !Number.isNaN(new Date(revealAt).getTime()) ? new Date(revealAt) : null;
+  // Back from signing in to an AI provider: reopen the note writer.
+  const [resumeWriter] = useState(() => new URLSearchParams(location.search).get("resume") === "write");
+  const song = useBuilder((s) => s.song);
+  const voice = useBuilder((s) => s.voice);
+  useEffect(() => {
+    if (resumeWriter) history.replaceState(null, "", "/create");
+  }, [resumeWriter]);
 
   /** Step 1: validate, then show the full preview for confirmation. */
   const review = (e: React.FormEvent<HTMLFormElement>) => {
@@ -71,6 +90,9 @@ export function CardStep() {
         occasion: st.occasion,
         revealAt: reveal,
         replyTo: st.replyTo,
+        ref: st.editing ? null : getRef(),
+        song: st.song ? { url: st.song.url } : null,
+        voice: st.voice ? { path: st.voice.path, sig: st.voice.sig, seconds: st.voice.seconds } : null,
         expiry: st.expiry,
         turnstileToken: captcha,
         website: honeypot,
@@ -107,6 +129,8 @@ export function CardStep() {
         expiry: st.expiry,
         wrap: st.design.wrapper,
         has_message: Boolean(st.card.message.trim()),
+        has_song: Boolean(st.song),
+        has_voice: Boolean(st.voice),
         length_bucket: st.card.message.length < 50 ? "short" : st.card.message.length < 200 ? "medium" : "long",
       });
       st.markSent({ slug: data.slug, token: data.token });
@@ -135,10 +159,12 @@ export function CardStep() {
         </div>
 
         <label className="block">
-          <span className="flex items-baseline justify-between">
+          <span className="flex items-center justify-between gap-2">
             <span className="label">Your note</span>
-            <span className="font-mono text-xs text-ink-soft">
-              {card.message.length}/{MAX_MSG}
+            <span className="flex items-center gap-3">
+              <span className="font-mono text-xs text-ink-soft">
+                {card.message.length}/{MAX_MSG}
+              </span>
             </span>
           </span>
           <textarea
@@ -150,6 +176,10 @@ export function CardStep() {
             data-clarity-mask="true"
           />
         </label>
+
+        <div className="-mt-2 flex justify-end">
+          <NoteWriterButton startOpen={resumeWriter} />
+        </div>
 
         {ideas.length > 0 && (
           <div>
@@ -163,6 +193,8 @@ export function CardStep() {
             </div>
           </div>
         )}
+
+        <Attachments />
 
         <fieldset>
           <legend className="label mb-2">Card</legend>
@@ -362,11 +394,23 @@ export function CardStep() {
                 type="datetime-local"
                 className="field"
                 value={revealAt}
+                min={minLocal}
                 onChange={(e) => setMeta({ revealAt: e.target.value })}
                 aria-label="Open date and time"
+                aria-describedby="reveal-zone"
                 required
               />
-              <p className="mt-2 text-sm text-ink-soft">They&rsquo;ll see a countdown until then. Time is in your timezone.</p>
+              <p id="reveal-zone" className="mt-2 text-sm text-ink-soft" suppressHydrationWarning>
+                {revealDate ? (
+                  <>
+                    Opens <strong className="font-medium text-ink">{fmtZoned(revealDate)}</strong>
+                    {zone ? ` (${zone})` : ""}.{" "}
+                  </>
+                ) : (
+                  <>Pick a time in your time zone{zone ? ` (${zone})` : ""}. </>
+                )}
+                They&rsquo;ll see a countdown and the opening time in their own time zone.
+              </p>
             </div>
           )}
         </div>
@@ -402,6 +446,11 @@ export function CardStep() {
           <div className="mx-auto max-w-sm rounded-[1.75rem] p-3 pb-5 ring-1 ring-line" style={{ background: bg.fill }}>
             <BouquetSvg design={design} showBackground={false} label="Your bouquet" className="mx-auto h-auto w-[62%] min-[420px]:w-[70%] lg:w-[78%]" />
             <NoteCard to={card.to} from={card.from} message={card.message} style={card.style} placeholder className="relative mx-2 -mt-6 -rotate-1 sm:-mt-10" />
+            {(song || voice) && (
+              <div className="mx-2">
+                <NoteExtras song={song} voice={voice?.url ? { url: voice.url, seconds: voice.seconds } : null} from={card.from} preview />
+              </div>
+            )}
           </div>
           <button type="submit" className="btn-primary mx-auto mt-5 hidden w-full max-w-sm text-base lg:flex" disabled={needsCaptcha}>
             {needsCaptcha ? <MiniBloom /> : <Eye className="size-4" aria-hidden />} {needsCaptcha ? "Checking…" : "Preview & send"}
@@ -441,6 +490,8 @@ function ConfirmSend({
   const card = useBuilder((s) => s.card);
   const expiry = useBuilder((s) => s.expiry);
   const occasion = useBuilder((s) => s.occasion);
+  const song = useBuilder((s) => s.song);
+  const voice = useBuilder((s) => s.voice);
 
   useEffect(() => {
     const d = ref.current;
@@ -458,6 +509,8 @@ function ConfirmSend({
     occasion,
     revealAt: reveal,
     createdAt: new Date().toISOString(),
+    song,
+    voice: voice?.url ? { url: voice.url, seconds: voice.seconds } : null,
   };
 
   const actions = (
@@ -492,7 +545,7 @@ function ConfirmSend({
       <p className="sticky top-0 z-40 h-7 truncate bg-ink px-4 text-center text-xs leading-7 text-cream">
         <span className="font-medium">Preview</span> · exactly what {card.to || "they"}&rsquo;ll see
         <span className="hidden sm:inline">
-          {" "}· Opens {reveal ? new Date(reveal).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "right away"} · Link lasts{" "}
+          {" "}· Opens {reveal ? `${fmtZoned(reveal)} your time` : "right away"} · Link lasts{" "}
           {EXPIRY_OPTIONS[expiry].name.toLowerCase()}
         </span>
       </p>

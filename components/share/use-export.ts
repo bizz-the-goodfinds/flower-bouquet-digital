@@ -11,7 +11,7 @@ const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").repla
 
 /** Image / video / GIF export with progress and friendly errors. */
 export function useExport(src: AnimSource, where: "sender" | "recipient") {
-  const { design, to, from } = src;
+  const { design, to, from, song } = src;
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function useExport(src: AnimSource, where: "sender" | "recipient") {
     setError(null);
     try {
       if (kind === "post" || kind === "story") {
-        await saveImage(await renderBouquetPng(design, { format: kind, to, from }), `${base}-${kind}.png`);
+        await saveImage(await renderBouquetPng(design, { format: kind, to, from, song }), `${base}-${kind}.png`);
       } else {
         const anim = await import("@/lib/bouquet/animate");
         if (kind === "video") {

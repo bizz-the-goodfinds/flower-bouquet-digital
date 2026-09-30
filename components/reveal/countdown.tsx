@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { fmtZoned } from "@/lib/time/zone";
 
 function parts(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -51,7 +52,7 @@ export function Countdown({ revealAt }: { revealAt: string }) {
         ))}
       </div>
       <p className="mt-4 text-sm text-ink-soft" suppressHydrationWarning>
-        Opens {opens.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}. Come back then, or keep this tab open.
+        Opens {now === null ? "soon" : `${fmtZoned(opens)} your time`}. Come back then, or keep this tab open.
       </p>
     </div>
   );

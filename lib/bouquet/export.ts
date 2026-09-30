@@ -3,6 +3,7 @@
 import { BACKGROUNDS, DEFAULTS } from "./catalog";
 import { CANVAS, bouquetSvg, type Design } from "./composition";
 import { logoSvg } from "../brand";
+import type { Song } from "./media";
 
 export type ExportFormat = "post" | "story";
 
@@ -21,7 +22,7 @@ function cssFont(varName: string, fallback: string) {
 }
 
 /** Renders the bouquet (plus a small caption) to a PNG blob. Everything happens on-device. */
-export async function renderBouquetPng(design: Design, opts: { format: ExportFormat; to?: string; from?: string }) {
+export async function renderBouquetPng(design: Design, opts: { format: ExportFormat; to?: string; from?: string; song?: Song | null }) {
   const W = 1080;
   const H = opts.format === "story" ? 1920 : 1350;
   const canvas = document.createElement("canvas");
@@ -58,10 +59,12 @@ export async function renderBouquetPng(design: Design, opts: { format: ExportFor
       ctx.fillText(truncate(ctx, opts.to || "you", W - 120), W / 2, 350);
     } else if (opts.to) {
       ctx.font = `italic 64px ${display}`;
-      ctx.fillText(truncate(ctx, `for ${opts.to}`, W - 120), W / 2, H - 168);
+      // Leave room for the song card when there is one.
+      ctx.fillText(truncate(ctx, `for ${opts.to}`, W - 120), W / 2, H - (opts.song ? 300 : 168));
     }
     const logo = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(logoSvg().replace("<svg ", '<svg width="128" height="128" '))}`);
-    const { drawBrandPill } = await import("./animate");
+    const { drawBrandPill, drawSongPill } = await import("./animate");
+    if (opts.song) drawSongPill(ctx, opts.song, W, H, { display, mono }, opts.format === "story");
     drawBrandPill(ctx, logo, W, H, { display, mono }, opts.format === "story");
   } finally {
     URL.revokeObjectURL(url);
